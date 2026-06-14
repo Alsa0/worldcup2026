@@ -247,18 +247,15 @@ async function initialize(env) {
 async function fetchNextBatch(env, currentSchedule) {
   const BATCH_SIZE = 10;
 
-  // Déclenche quand l'avant-dernier match du batch actuel vient de se terminer
   const triggerIndex = currentSchedule.length - 2;
   if (triggerIndex < 0) return;
   if (!currentSchedule[triggerIndex]?.finished) return;
 
-  // Vérifie qu'il reste assez de matchs futurs non terminés
   const futureMatches = currentSchedule.filter(s =>
     !s.finished && s.matchStart && s.matchStart > Date.now()
   );
   if (futureMatches.length > 2) return;
 
-  // Récupère les nouveaux matchs depuis SerpApi
   const games = await fetchFromSerpApi(env);
   const existingKeys = new Set(currentSchedule.map(s => s.key));
 
@@ -280,8 +277,6 @@ async function fetchNextBatch(env, currentSchedule) {
 }
 
 async function syncMissingFinishedMatches(env, schedule, existing) {
-  // Trouve les matchs qui devraient être terminés mais pas encore dans Firebase
-  // Un match est "probablement terminé" s'il a commencé depuis plus de 2h10
   const now = Date.now();
   const THRESHOLD = 130 * 60 * 1000;
 
@@ -353,7 +348,6 @@ async function runSyncCycle(env) {
 
   const existing = await getFirebase(env, 'officialScores') || {};
 
-  // Vérifie s'il y a des matchs terminés mais pas encore dans Firebase
   const hasMissingFinished = await syncMissingFinishedMatches(env, schedule, existing);
 
   if (matchesDue.length === 0 && !matchToConfirm && !hasLiveMatches && !hasMissingFinished) return;
@@ -409,7 +403,6 @@ async function runSyncCycle(env) {
 
   await setFirebase(env, 'syncSchedule', updatedSchedule);
 
-  // Charge le prochain batch de matchs si l'avant-dernier est terminé
   await fetchNextBatch(env, updatedSchedule);
 }
 
