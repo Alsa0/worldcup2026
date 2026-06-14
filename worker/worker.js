@@ -246,10 +246,13 @@ async function initialize(env) {
 
 async function fetchNextBatch(env, currentSchedule) {
   const BATCH_SIZE = 10;
+  const size = currentSchedule.length;
+  if (size === 0) return;
 
-  const triggerIndex = currentSchedule.length - 2;
-  if (triggerIndex < 0) return;
-  if (!currentSchedule[triggerIndex]?.finished) return;
+  const lastFinished = currentSchedule[size - 1]?.finished === true;
+  const beforeLastFinished = currentSchedule[size - 2]?.finished === true;
+
+  if (!lastFinished && !beforeLastFinished) return;
 
   const futureMatches = currentSchedule.filter(s =>
     !s.finished && s.matchStart && s.matchStart > Date.now()
@@ -280,17 +283,21 @@ async function syncMissingFinishedMatches(env, schedule, existing) {
   const now = Date.now();
   const THRESHOLD = 130 * 60 * 1000;
 
-  const missing = schedule.filter(item => {
+  const missingInSchedule = schedule.filter(item => {
     if (item.finished) return false;
     if (!item.matchStart) return false;
     const elapsed = now - item.matchStart;
     if (elapsed < THRESHOLD) return false;
-    // Pas encore dans Firebase ou encore marqué live
     const score = existing[item.key];
     return !score || (!score.done && score.live);
   });
 
-  return missing.length > 0;
+  const allKnownKeys = new Set(schedule.map(s => s.key));
+  const missingFromFirebase = Object.keys(GROUPS).flatMap((grp, _) =>
+    GROUPS[grp].map((_, idx) => `${grp}_${idx}`)
+  ).filter(key => !allKnownKeys.has(key) && !existing[key]);
+
+  return missingInSchedule.length > 0 || missingFromFirebase.length > 0;
 }
 
 async function runSyncCycle(env) {
