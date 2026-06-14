@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coupe du Monde 2026 — Simulateur</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Barlow:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+
+<body>
+
+  <header>
+    <div class="logo">
+      <span class="logo-trophy">🏆</span>
+      <div class="logo-text">
+        <h1>World Cup 2026</h1>
+        <span>Simulateur & Tracker</span>
+      </div>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showTab('groupes')">Phase de Groupes</button>
+      <button class="nav-tab" onclick="showTab('finale')">Phase Finale</button>
+      <button class="nav-tab" onclick="showTab('champion')">Champion</button>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="autoSimulate()">Simuler</button>
+      <button class="btn btn-accent" onclick="resetAll()">↺ Réinitialiser</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="tab-content active" id="tab-groupes">
+      <div class="sim-banner">
+        <div>
+          <div class="sim-banner-text">Scores officiels — impossible à modifier</div>
+          <div class="sim-banner-sub">Simulez les matchs pas encore joués pour voir comment votre équipe peut passer
+          </div>
+        </div>
+        <button class="btn btn-gold" onclick="autoSimulate()">⚡ Simuler Aléatoirement</button>
+      </div>
+      <div class="groups-grid" id="groupsGrid"></div>
+      <div
+        style="text-align:center;color:var(--text2);font-size:12px;margin-top:12px;font-family:'Barlow Condensed',sans-serif;letter-spacing:2px;">
+        🟡 1er qualifié · ⚪ 2ème qualifié · 🔵 8 meilleurs 3èmes
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-finale">
+      <div class="section-title">🏅 Phase Éliminatoire — 16es de finale → Finale</div>
+      <div class="bracket-container">
+        <div id="knockoutBracket"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-champion">
+      <div style="text-align:center;padding:40px 20px;">
+        <div class="section-title" style="justify-content:center;margin-bottom:24px;">🏆 Champion du Monde 2026</div>
+        <div id="championSection">
+          <div style="color:var(--text2);font-family:'Barlow Condensed',sans-serif;letter-spacing:2px;font-size:14px;">
+            Terminez la phase finale pour voir le champion !
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="scoreModal">
+    <div class="modal">
+      <div class="modal-title" id="modalTitle">Saisir le score</div>
+      <div class="modal-match">
+        <div class="modal-team" id="modalTeam1">—</div>
+        <input class="modal-input" type="number" id="modalScore1" min="0" max="20" value="0" oninput="checkPenalty()">
+        <div class="modal-sep">—</div>
+        <input class="modal-input" type="number" id="modalScore2" min="0" max="20" value="0" oninput="checkPenalty()">
+        <div class="modal-team" style="text-align:right" id="modalTeam2">—</div>
+      </div>
+      <div id="penaltySection"
+        style="display:none;margin-top:10px;padding:10px;background:var(--surface3);border-radius:6px;border:1px solid var(--accent2);">
+        <div
+          style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--accent2);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">
+          Tirs au but</div>
+        <div class="modal-match" style="padding:8px;margin-bottom:0;">
+          <div class="modal-team" id="modalPenTeam1" style="font-size:12px;">—</div>
+          <input class="modal-input" type="number" id="modalPen1" min="0" max="20" value="0">
+          <div class="modal-sep">—</div>
+          <input class="modal-input" type="number" id="modalPen2" min="0" max="20" value="0">
+          <div class="modal-team" id="modalPenTeam2" style="text-align:right;font-size:12px;">—</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Annuler</button>
+        <button class="btn btn-green" onclick="confirmModalScore()">✓ Valider</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="src/models/data.js"></script>
+  <script src="src/services/StorageService.js"></script>
+  <script src="src/services/FirebaseService.js"></script>
+  <script src="src/services/SyncService.js"></script>
+  <script src="src/models/Group.js"></script>
+  <script src="src/models/Knockout.js"></script>
+  <script src="src/views/GroupView.js"></script>
+  <script src="src/views/KnockoutView.js"></script>
+  <script src="src/views/ChampionView.js"></script>
+  <script src="src/controllers/GroupController.js"></script>
+  <script src="src/controllers/KnockoutController.js"></script>
+  <script src="src/app.js"></script>
+</body>
+
+</html>
