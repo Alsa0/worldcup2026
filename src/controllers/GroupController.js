@@ -1,21 +1,21 @@
 const GroupController = {
   openModal(grp, idx) {
-    const key        = `${grp}_${idx}`;
+    const key = `${grp}_${idx}`;
     const isOfficial = SyncService.isOfficial(App.state.groupScores, key);
 
     if (isOfficial) {
-      App.showToast('Ce résultat est officiel 🔒', 'error');
+      App.showToast('Ce résultat est officiel', 'error');
       return;
     }
 
-    const m  = GROUPS[grp].matches[idx];
+    const m = GROUPS[grp].matches[idx];
     const sc = App.state.groupScores[key];
 
-    document.getElementById('modalTitle').textContent       = `Groupe ${grp} — ${m.d}`;
-    document.getElementById('modalTeam1').innerHTML         = `${teamFlag(m.t1, 24)} ${teamName(m.t1)}`;
-    document.getElementById('modalTeam2').innerHTML         = `${teamFlag(m.t2, 24)} ${teamName(m.t2)}`;
-    document.getElementById('modalScore1').value            = sc?.s1 ?? 0;
-    document.getElementById('modalScore2').value            = sc?.s2 ?? 0;
+    document.getElementById('modalTitle').textContent = `Groupe ${grp} — ${m.d}`;
+    document.getElementById('modalTeam1').innerHTML = `${teamFlag(m.t1, 24)} ${teamName(m.t1)}`;
+    document.getElementById('modalTeam2').innerHTML = `${teamFlag(m.t2, 24)} ${teamName(m.t2)}`;
+    document.getElementById('modalScore1').value = sc?.s1 ?? 0;
+    document.getElementById('modalScore2').value = sc?.s2 ?? 0;
     document.getElementById('penaltySection').style.display = 'none';
 
     App.currentModal = { type: 'group', grp, idx, key };

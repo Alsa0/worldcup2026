@@ -8,7 +8,7 @@ const Group = {
 
     data.matches.forEach((m, idx) => {
       const sc = groupScores[`${grp}_${idx}`];
-      if (!sc || !sc.done) return;
+      if (!sc || (!sc.done && !sc.official)) return;
       const { s1, s2 } = sc;
       if (!(m.t1 in teams)) teams[m.t1] = { code: m.t1, pts: 0, j: 0, g: 0, ga: 0, gf: 0, gd: 0 };
       if (!(m.t2 in teams)) teams[m.t2] = { code: m.t2, pts: 0, j: 0, g: 0, ga: 0, gf: 0, gd: 0 };

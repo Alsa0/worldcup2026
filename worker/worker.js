@@ -127,7 +127,7 @@ function buildSchedule(games) {
 
     const knockout = isKnockoutKey(key);
 
-    const offsets = knockout ? [115, 125, 160, 175] : [115, 125];
+    const offsets = knockout ? [120, 130, 160, 175] : [120, 130];
     const syncTimes = matchStart
       ? offsets.map(m => matchStart + m * 60 * 1000)
       : [];
@@ -244,6 +244,60 @@ async function initialize(env) {
   return { scoresFound: Object.keys(scores).length, matchesScheduled: schedule.length };
 }
 
+async function fetchNextBatch(env, currentSchedule) {
+  const BATCH_SIZE = 10;
+
+  // Déclenche quand l'avant-dernier match du batch actuel vient de se terminer
+  const triggerIndex = currentSchedule.length - 2;
+  if (triggerIndex < 0) return;
+  if (!currentSchedule[triggerIndex]?.finished) return;
+
+  // Vérifie qu'il reste assez de matchs futurs non terminés
+  const futureMatches = currentSchedule.filter(s =>
+    !s.finished && s.matchStart && s.matchStart > Date.now()
+  );
+  if (futureMatches.length > 2) return;
+
+  // Récupère les nouveaux matchs depuis SerpApi
+  const games = await fetchFromSerpApi(env);
+  const existingKeys = new Set(currentSchedule.map(s => s.key));
+
+  const newGames = games.filter(g => {
+    if (!g.teams || g.teams.length < 2) return false;
+    const t1 = toCode(g.teams[0].name);
+    const t2 = toCode(g.teams[1].name);
+    if (!t1 || !t2) return false;
+    const key = findMatchKey(t1, t2);
+    return key && !existingKeys.has(key);
+  });
+
+  if (newGames.length === 0) return;
+
+  const newItems = buildSchedule(newGames);
+  const nextBatch = newItems.slice(0, BATCH_SIZE);
+  const updatedSchedule = [...currentSchedule, ...nextBatch];
+  await setFirebase(env, 'syncSchedule', updatedSchedule);
+}
+
+async function syncMissingFinishedMatches(env, schedule, existing) {
+  // Trouve les matchs qui devraient être terminés mais pas encore dans Firebase
+  // Un match est "probablement terminé" s'il a commencé depuis plus de 2h10
+  const now = Date.now();
+  const THRESHOLD = 130 * 60 * 1000;
+
+  const missing = schedule.filter(item => {
+    if (item.finished) return false;
+    if (!item.matchStart) return false;
+    const elapsed = now - item.matchStart;
+    if (elapsed < THRESHOLD) return false;
+    // Pas encore dans Firebase ou encore marqué live
+    const score = existing[item.key];
+    return !score || (!score.done && score.live);
+  });
+
+  return missing.length > 0;
+}
+
 async function runSyncCycle(env) {
   const now = Date.now();
   const WINDOW = 2 * 60 * 1000;
@@ -297,12 +351,16 @@ async function runSyncCycle(env) {
 
   const hasLiveMatches = liveMatches.length > 0;
 
-  if (matchesDue.length === 0 && !matchToConfirm && !hasLiveMatches) return;
+  const existing = await getFirebase(env, 'officialScores') || {};
+
+  // Vérifie s'il y a des matchs terminés mais pas encore dans Firebase
+  const hasMissingFinished = await syncMissingFinishedMatches(env, schedule, existing);
+
+  if (matchesDue.length === 0 && !matchToConfirm && !hasLiveMatches && !hasMissingFinished) return;
 
   const games = await fetchFromSerpApi(env);
   const finishedScores = parseSerpGames(games);
   const liveScores = parseLiveGames(games);
-  const existing = await getFirebase(env, 'officialScores') || {};
 
   let updated = false;
   const merged = { ...existing };
@@ -350,6 +408,9 @@ async function runSyncCycle(env) {
   });
 
   await setFirebase(env, 'syncSchedule', updatedSchedule);
+
+  // Charge le prochain batch de matchs si l'avant-dernier est terminé
+  await fetchNextBatch(env, updatedSchedule);
 }
 
 export default {
