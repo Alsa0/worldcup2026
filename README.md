@@ -147,7 +147,7 @@ worldcup2026/
 
 ---
 
-## 👥 Équipes participantes
+## Équipes participantes
 
 | Groupe | Équipes |
 |---|---|
