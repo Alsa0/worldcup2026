@@ -140,44 +140,79 @@ function buildSchedule(games) {
   return schedule;
 }
 
-async function fetchFromSerpApi(env) {
-  const res1 = await fetch(
-    `https://serpapi.com/search.json?engine=google&q=FIFA+World+Cup+2026&api_key=${env.SERPAPI_KEY}`
-  );
-  const data1 = await res1.json();
-  const games1 = data1.sports_results?.games || [];
+function isQuotaError(data, status) {
+  if (status === 429) return true;
+  if (!data.error) return false;
+  const err = data.error.toLowerCase();
+  return err.includes('limit') || err.includes('quota') || err.includes('upgrade') || err.includes('plan');
+}
 
-  const res2 = await fetch(
-    `https://serpapi.com/search.json?engine=google&q=FIFA+World+Cup+2026+results&api_key=${env.SERPAPI_KEY}`
+async function fetchWithKey(key, query) {
+  const res = await fetch(
+    `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(query)}&api_key=${key}`
   );
-  const data2 = await res2.json();
-  const games2 = data2.sports_results?.games || [];
+  const data = await res.json();
+  return { data, status: res.status };
+}
 
+function mergeGames(games1, data1, games2, data2) {
   const allGames = [...games1];
-
-  if (data1.sports_results?.game_spotlight) {
-    allGames.push(data1.sports_results.game_spotlight);
-  }
-  if (data2.sports_results?.game_spotlight) {
-    allGames.push(data2.sports_results.game_spotlight);
-  }
-
+  if (data1.sports_results?.game_spotlight) allGames.push(data1.sports_results.game_spotlight);
+  if (data2.sports_results?.game_spotlight) allGames.push(data2.sports_results.game_spotlight);
   games2.forEach(g2 => {
     if (!g2.teams || g2.teams.length < 2) return;
     const exists = allGames.some(g1 => {
       if (!g1.teams || g1.teams.length < 2) return false;
-      const g1t1 = g1.teams[0].name;
-      const g1t2 = g1.teams[1].name;
-      const g2t1 = g2.teams[0].name;
-      const g2t2 = g2.teams[1].name;
-      return (g1t1 === g2t1 && g1t2 === g2t2) || (g1t1 === g2t2 && g1t2 === g2t1);
+      return (g1.teams[0].name === g2.teams[0].name && g1.teams[1].name === g2.teams[1].name) ||
+        (g1.teams[0].name === g2.teams[1].name && g1.teams[1].name === g2.teams[0].name);
     });
-    if (!exists) {
-      allGames.push(g2);
+    if (!exists) allGames.push(g2);
+  });
+  return allGames;
+}
+
+async function fetchFromSerpApi(env) {
+  const keys = [env.SERPAPI_KEY, env.SERPAPI_KEY2].filter(Boolean);
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    try {
+      const { data: data1, status: status1 } = await fetchWithKey(key, 'FIFA World Cup 2026');
+
+      if (isQuotaError(data1, status1)) {
+        await setFirebase(env, `apiStatus/key${i + 1}`, { exhausted: true, at: Date.now() });
+        continue;
+      }
+
+      const { data: data2 } = await fetchWithKey(key, 'FIFA World Cup 2026 results');
+
+      const games1 = data1.sports_results?.games || [];
+      const games2 = data2.sports_results?.games || [];
+      const allGames = mergeGames(games1, data1, games2, data2);
+
+      await setFirebase(env, 'apiStatus', {
+        activeKey: i + 1,
+        key1Exhausted: i > 0,
+        key2Exhausted: false,
+        allExhausted: false,
+        lastSuccess: Date.now()
+      });
+
+      return allGames;
+
+    } catch (e) {
+      continue;
     }
+  }
+
+  await setFirebase(env, 'apiStatus', {
+    allExhausted: true,
+    key1Exhausted: true,
+    key2Exhausted: true,
+    at: Date.now()
   });
 
-  return allGames;
+  return [];
 }
 
 async function getFirebase(env, path) {
@@ -323,13 +358,27 @@ export default {
 
     if (url.pathname === '/debug-serp') {
       const q = url.searchParams.get('q') || 'FIFA World Cup 2026';
+      const keys = [env.SERPAPI_KEY, env.SERPAPI_KEY2].filter(Boolean);
+      const key = keys[0];
       const res = await fetch(
-        `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(q)}&api_key=${env.SERPAPI_KEY}`
+        `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(q)}&api_key=${key}`
       );
       const data = await res.json();
       return new Response(JSON.stringify(data.sports_results || {}, null, 2), {
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    if (url.pathname === '/api-status') {
+      const status = await getFirebase(env, 'apiStatus') || {};
+      return new Response(JSON.stringify({
+        activeKey: status.activeKey || 1,
+        key1Exhausted: status.key1Exhausted || false,
+        key2Exhausted: status.key2Exhausted || false,
+        allExhausted: status.allExhausted || false,
+        lastSuccess: status.lastSuccess ? new Date(status.lastSuccess).toISOString() : null,
+        key2Available: !!env.SERPAPI_KEY2
+      }, null, 2), { headers: { 'Content-Type': 'application/json' } });
     }
 
     if (url.pathname === '/init') {
