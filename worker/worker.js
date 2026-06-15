@@ -20,7 +20,8 @@ const TEAM_MAP = {
   'Colombia': 'COL', 'Colombie': 'COL', 'England': 'ENG', 'Angleterre': 'ENG',
   'Croatia': 'CRO', 'Croatie': 'CRO', 'Ghana': 'GHA', 'Panama': 'PAN',
   'Czech Republic': 'TCH', 'Czechia': 'TCH', 'Tchéquie': 'TCH',
-  'Bosnia': 'BIH', 'Bosnia and Herzegovina': 'BIH', 'Bosnie-Herzégovine': 'BIH', 'Turkey': 'TUR', 'Turquie': 'TUR', 'Türkiye': 'TUR', 'TǬrkiye': 'TUR',
+  'Bosnia': 'BIH', 'Bosnia and Herzegovina': 'BIH', 'Bosnie-Herzégovine': 'BIH',
+  'Turkey': 'TUR', 'Turquie': 'TUR', 'Türkiye': 'TUR', 'TǬrkiye': 'TUR',
   'Sweden': 'SUE', 'Suède': 'SUE', 'Iraq': 'IRQ', 'Irak': 'IRQ',
   'DR Congo': 'RDC', 'RD Congo': 'RDC',
 };
@@ -41,6 +42,38 @@ const GROUPS = {
 };
 
 const KNOCKOUT_ROUNDS = ['r16', 'r8', 'qf', 'sf', 'f'];
+
+// Heures par défaut si SerpApi ne retourne pas les heures exactes
+const DEFAULT_TIMES = {
+  'A_0': '21:00', 'A_1': '04:00', 'A_2': '18:00', 'A_3': '03:00', 'A_4': '03:00', 'A_5': '03:00',
+  'B_0': '21:00', 'B_1': '21:00', 'B_2': '00:00', 'B_3': '00:00', 'B_4': '21:00', 'B_5': '21:00',
+  'C_0': '00:00', 'C_1': '03:00', 'C_2': '00:00', 'C_3': '03:00', 'C_4': '00:00', 'C_5': '00:00',
+  'D_0': '03:00', 'D_1': '06:00', 'D_2': '21:00', 'D_3': '06:00', 'D_4': '04:00', 'D_5': '04:00',
+  'E_0': '19:00', 'E_1': '01:00', 'E_2': '22:00', 'E_3': '02:00', 'E_4': '22:00', 'E_5': '22:00',
+  'F_0': '22:00', 'F_1': '04:00', 'F_2': '19:00', 'F_3': '06:00', 'F_4': '01:00', 'F_5': '01:00',
+  'G_0': '21:00', 'G_1': '03:00', 'G_2': '21:00', 'G_3': '03:00', 'G_4': '05:00', 'G_5': '05:00',
+  'H_0': '18:00', 'H_1': '00:00', 'H_2': '18:00', 'H_3': '00:00', 'H_4': '02:00', 'H_5': '02:00',
+  'I_0': '21:00', 'I_1': '00:00', 'I_2': '23:00', 'I_3': '02:00', 'I_4': '21:00', 'I_5': '21:00',
+  'J_0': '03:00', 'J_1': '06:00', 'J_2': '19:00', 'J_3': '05:00', 'J_4': '04:00', 'J_5': '04:00',
+  'K_0': '19:00', 'K_1': '04:00', 'K_2': '19:00', 'K_3': '04:00', 'K_4': '01:30', 'K_5': '01:30',
+  'L_0': '22:00', 'L_1': '01:00', 'L_2': '22:00', 'L_3': '01:00', 'L_4': '23:00', 'L_5': '23:00',
+};
+
+// Dates des matchs (UTC) — source de vérité hardcodée
+const MATCH_DATES = {
+  'A_0': 'Jun 11', 'A_1': 'Jun 12', 'A_2': 'Jun 18', 'A_3': 'Jun 19', 'A_4': 'Jun 25', 'A_5': 'Jun 25',
+  'B_0': 'Jun 12', 'B_1': 'Jun 13', 'B_2': 'Jun 18', 'B_3': 'Jun 18', 'B_4': 'Jun 24', 'B_5': 'Jun 24',
+  'C_0': 'Jun 13', 'C_1': 'Jun 14', 'C_2': 'Jun 19', 'C_3': 'Jun 20', 'C_4': 'Jun 24', 'C_5': 'Jun 24',
+  'D_0': 'Jun 13', 'D_1': 'Jun 14', 'D_2': 'Jun 19', 'D_3': 'Jun 20', 'D_4': 'Jun 26', 'D_5': 'Jun 26',
+  'E_0': 'Jun 14', 'E_1': 'Jun 15', 'E_2': 'Jun 20', 'E_3': 'Jun 21', 'E_4': 'Jun 25', 'E_5': 'Jun 25',
+  'F_0': 'Jun 14', 'F_1': 'Jun 15', 'F_2': 'Jun 20', 'F_3': 'Jun 21', 'F_4': 'Jun 26', 'F_5': 'Jun 26',
+  'G_0': 'Jun 15', 'G_1': 'Jun 16', 'G_2': 'Jun 21', 'G_3': 'Jun 22', 'G_4': 'Jun 27', 'G_5': 'Jun 27',
+  'H_0': 'Jun 15', 'H_1': 'Jun 16', 'H_2': 'Jun 21', 'H_3': 'Jun 22', 'H_4': 'Jun 27', 'H_5': 'Jun 27',
+  'I_0': 'Jun 16', 'I_1': 'Jun 17', 'I_2': 'Jun 22', 'I_3': 'Jun 23', 'I_4': 'Jun 26', 'I_5': 'Jun 26',
+  'J_0': 'Jun 17', 'J_1': 'Jun 17', 'J_2': 'Jun 22', 'J_3': 'Jun 23', 'J_4': 'Jun 28', 'J_5': 'Jun 28',
+  'K_0': 'Jun 17', 'K_1': 'Jun 18', 'K_2': 'Jun 23', 'K_3': 'Jun 24', 'K_4': 'Jun 28', 'K_5': 'Jun 28',
+  'L_0': 'Jun 17', 'L_1': 'Jun 18', 'L_2': 'Jun 23', 'L_3': 'Jun 24', 'L_4': 'Jun 27', 'L_5': 'Jun 27',
+};
 
 function findMatchKey(t1, t2) {
   for (const grp of Object.keys(GROUPS)) {
@@ -69,6 +102,26 @@ function isLive(status) {
 
 function isKnockoutKey(key) {
   return key && KNOCKOUT_ROUNDS.some(r => key.startsWith(r));
+}
+
+function parseMatchTime(dateStr, timeStr) {
+  try {
+    const year = new Date().getFullYear();
+    const dt = new Date(`${dateStr} ${year} ${timeStr} UTC`);
+    return isNaN(dt.getTime()) ? null : dt.getTime();
+  } catch (e) { return null; }
+}
+
+// Retourne toutes les clés de matchs pour une date donnée (ex: "Jun 15")
+function getMatchKeysForDate(dateStr) {
+  return Object.entries(MATCH_DATES)
+    .filter(([, d]) => d === dateStr)
+    .map(([key]) => key);
+}
+
+// Formate une date JS en "Jun 15"
+function formatDate(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
 function parseSerpGames(games) {
@@ -103,41 +156,48 @@ function parseLiveGames(games) {
   return scores;
 }
 
-function parseMatchTime(dateStr, timeStr) {
-  try {
-    const year = new Date().getFullYear();
-    const dt = new Date(`${dateStr} ${year} ${timeStr} UTC`);
-    return isNaN(dt.getTime()) ? null : dt.getTime();
-  } catch (e) { return null; }
-}
-
-function buildSchedule(games) {
-  const schedule = [];
+// Extrait les heures depuis les résultats SerpApi
+// Retourne un map { matchKey: 'HH:MM' }
+function extractTimesFromSerp(games) {
+  const times = {};
   games.forEach(g => {
-    if (!g.teams || g.teams.length < 2) return;
+    if (!g.teams || g.teams.length < 2 || !g.time) return;
     const t1 = toCode(g.teams[0].name);
     const t2 = toCode(g.teams[1].name);
     if (!t1 || !t2) return;
     const key = findMatchKey(t1, t2);
-    if (!key) return;
+    if (key) times[key] = g.time;
+  });
+  return times;
+}
 
-    const finished = isFinished(g.status);
-    const matchStart = parseMatchTime(g.date, g.time || '00:00');
-    if (!matchStart && !finished) return;
+// Construit les entrées de schedule pour une liste de clés de matchs
+// Utilise les heures de SerpApi si disponibles, sinon les heures par défaut
+function buildScheduleEntries(matchKeys, serpTimes, existingKeys) {
+  const entries = [];
+  matchKeys.forEach(key => {
+    if (existingKeys.has(key)) return; // Ne pas écraser ce qui existe déjà
+
+    const dateStr = MATCH_DATES[key];
+    if (!dateStr) return;
+
+    // Priorité : heure SerpApi → heure par défaut
+    const timeStr = serpTimes[key] || DEFAULT_TIMES[key] || '00:00';
+    const matchStart = parseMatchTime(dateStr, timeStr);
+    if (!matchStart) return;
 
     const knockout = isKnockoutKey(key);
-
     const offsets = knockout ? [120, 130, 160, 175] : [120, 130];
-    const syncTimes = matchStart
-      ? offsets.map(m => matchStart + m * 60 * 1000)
-      : [];
+    const syncTimes = offsets.map(m => matchStart + m * 60 * 1000);
 
-    schedule.push({
-      key, t1, t2, matchStart, syncTimes,
-      finished, knockout, syncsExecuted: []
+    entries.push({
+      key, matchStart, syncTimes,
+      finished: false, knockout,
+      syncsExecuted: [],
+      timeSource: serpTimes[key] ? 'serp' : 'default'
     });
   });
-  return schedule;
+  return entries;
 }
 
 function isQuotaError(data, status) {
@@ -178,40 +238,30 @@ async function fetchFromSerpApi(env) {
     const key = keys[i];
     try {
       const { data: data1, status: status1 } = await fetchWithKey(key, 'FIFA World Cup 2026');
-
       if (isQuotaError(data1, status1)) {
         await setFirebase(env, `apiStatus/key${i + 1}`, { exhausted: true, at: Date.now() });
         continue;
       }
 
       const { data: data2 } = await fetchWithKey(key, 'FIFA World Cup 2026 results');
-
       const games1 = data1.sports_results?.games || [];
       const games2 = data2.sports_results?.games || [];
       const allGames = mergeGames(games1, data1, games2, data2);
 
       await setFirebase(env, 'apiStatus', {
-        activeKey: i + 1,
-        key1Exhausted: i > 0,
-        key2Exhausted: false,
-        allExhausted: false,
+        activeKey: i + 1, key1Exhausted: i > 0,
+        key2Exhausted: false, allExhausted: false,
         lastSuccess: Date.now()
       });
 
       return allGames;
-
-    } catch (e) {
-      continue;
-    }
+    } catch (e) { continue; }
   }
 
   await setFirebase(env, 'apiStatus', {
-    allExhausted: true,
-    key1Exhausted: true,
-    key2Exhausted: true,
-    at: Date.now()
+    allExhausted: true, key1Exhausted: true,
+    key2Exhausted: true, at: Date.now()
   });
-
   return [];
 }
 
@@ -231,73 +281,92 @@ async function setFirebase(env, path, data) {
   });
 }
 
-async function initialize(env) {
-  const games = await fetchFromSerpApi(env);
-  const scores = parseSerpGames(games.filter(g => isFinished(g.status)));
-  const schedule = buildSchedule(games);
+// Met à jour le schedule pour aujourd'hui et demain
+// Additive — ne touche pas à ce qui existe déjà
+async function updateScheduleForDays(env, date1, date2, existingSchedule, serpGames) {
+  const existingKeys = new Set(existingSchedule.map(s => s.key));
+  const serpTimes = extractTimesFromSerp(serpGames);
 
-  if (Object.keys(scores).length > 0) {
-    await setFirebase(env, 'officialScores', scores);
-  }
-  await setFirebase(env, 'syncSchedule', schedule);
+  const keysDay1 = getMatchKeysForDate(formatDate(date1));
+  const keysDay2 = date2 ? getMatchKeysForDate(formatDate(date2)) : [];
+  const allKeys = [...keysDay1, ...keysDay2];
 
-  return { scoresFound: Object.keys(scores).length, matchesScheduled: schedule.length };
-}
+  const newEntries = buildScheduleEntries(allKeys, serpTimes, existingKeys);
 
-async function fetchNextBatch(env, currentSchedule) {
-  const BATCH_SIZE = 10;
-  const size = currentSchedule.length;
-  if (size === 0) return;
+  if (newEntries.length === 0) return existingSchedule;
 
-  const lastFinished = currentSchedule[size - 1]?.finished === true;
-  const beforeLastFinished = currentSchedule[size - 2]?.finished === true;
-
-  if (!lastFinished && !beforeLastFinished) return;
-
-  const futureMatches = currentSchedule.filter(s =>
-    !s.finished && s.matchStart && s.matchStart > Date.now()
-  );
-  if (futureMatches.length > 2) return;
-
-  const games = await fetchFromSerpApi(env);
-  const existingKeys = new Set(currentSchedule.map(s => s.key));
-
-  const newGames = games.filter(g => {
-    if (!g.teams || g.teams.length < 2) return false;
-    const t1 = toCode(g.teams[0].name);
-    const t2 = toCode(g.teams[1].name);
-    if (!t1 || !t2) return false;
-    const key = findMatchKey(t1, t2);
-    return key && !existingKeys.has(key);
-  });
-
-  if (newGames.length === 0) return;
-
-  const newItems = buildSchedule(newGames);
-  const nextBatch = newItems.slice(0, BATCH_SIZE);
-  const updatedSchedule = [...currentSchedule, ...nextBatch];
+  const updatedSchedule = [...existingSchedule, ...newEntries];
   await setFirebase(env, 'syncSchedule', updatedSchedule);
+  return updatedSchedule;
 }
 
-async function syncMissingFinishedMatches(env, schedule, existing) {
-  const now = Date.now();
-  const THRESHOLD = 130 * 60 * 1000;
+// Rattrapage — récupère les scores de tous les matchs passés
+// Ne touche pas aux scores déjà corrects dans Firebase
+async function catchUpPastScores(env, games, existingScores) {
+  const finishedScores = parseSerpGames(games);
+  let updated = false;
+  const merged = { ...existingScores };
 
-  const missingInSchedule = schedule.filter(item => {
-    if (item.finished) return false;
-    if (!item.matchStart) return false;
-    const elapsed = now - item.matchStart;
-    if (elapsed < THRESHOLD) return false;
-    const score = existing[item.key];
-    return !score || (!score.done && score.live);
+  Object.entries(finishedScores).forEach(([key, val]) => {
+    const prev = existingScores[key];
+    if (!prev || !prev.done) {
+      merged[key] = val;
+      updated = true;
+    }
   });
 
-  const allKnownKeys = new Set(schedule.map(s => s.key));
-  const missingFromFirebase = Object.keys(GROUPS).flatMap((grp, _) =>
-    GROUPS[grp].map((_, idx) => `${grp}_${idx}`)
-  ).filter(key => !allKnownKeys.has(key) && !existing[key]);
+  if (updated) {
+    await setFirebase(env, 'officialScores', merged);
+  }
+  return merged;
+}
 
-  return missingInSchedule.length > 0 || missingFromFirebase.length > 0;
+async function initialize(env) {
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+  // Charge l'état existant dans Firebase
+  const existingSchedule = await getFirebase(env, 'syncSchedule') || [];
+  const existingScores = await getFirebase(env, 'officialScores') || {};
+
+  // Appelle SerpApi une fois pour tout
+  const games = await fetchFromSerpApi(env);
+
+  // 1. Rattrapage — tous les scores passés manquants
+  const mergedScores = await catchUpPastScores(env, games, existingScores);
+
+  // 2. Schedule aujourd'hui + demain (additive)
+  await updateScheduleForDays(env, today, tomorrow, existingSchedule, games);
+
+  // Marque les matchs dans le schedule comme terminés si score trouvé
+  const updatedSchedule = await getFirebase(env, 'syncSchedule') || [];
+  const finalSchedule = updatedSchedule.map(item => {
+    if (!item.finished && mergedScores[item.key]?.done) {
+      return { ...item, finished: true };
+    }
+    return item;
+  });
+  await setFirebase(env, 'syncSchedule', finalSchedule);
+
+  return {
+    scoresFound: Object.keys(mergedScores).length,
+    matchesScheduled: finalSchedule.length,
+    todayDate: formatDate(today),
+    tomorrowDate: formatDate(tomorrow)
+  };
+}
+
+// Cron minuit — ajoute le schedule des 2 prochains jours
+async function scheduleCronMidnight(env) {
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+  const existingSchedule = await getFirebase(env, 'syncSchedule') || [];
+  const games = await fetchFromSerpApi(env);
+
+  await updateScheduleForDays(env, today, tomorrow, existingSchedule, games);
 }
 
 async function runSyncCycle(env) {
@@ -306,59 +375,61 @@ async function runSyncCycle(env) {
 
   let schedule = await getFirebase(env, 'syncSchedule');
 
+  // Si pas de schedule → initialise
   if (!schedule || !Array.isArray(schedule) || schedule.length === 0) {
     await initialize(env);
     return;
   }
 
+  // Matchs avec synchro due dans la fenêtre de 2 minutes
   const matchesDue = schedule.filter(item => {
     if (item.finished) return false;
-
-    const dueSyncTimes = item.syncTimes.filter(t =>
-      t <= now + WINDOW &&
-      t >= now - WINDOW &&
+    const due = (item.syncTimes || []).filter(t =>
+      t <= now + WINDOW && t >= now - WINDOW &&
       !(item.syncsExecuted || []).includes(t)
     );
-    if (dueSyncTimes.length > 0) {
-      return true;
-    }
+    if (due.length > 0) return true;
 
-    const matchAge = now - (item.matchStart || 0);
-    if (item.matchStart && matchAge > 2 * 60 * 60 * 1000) {
-      const lastChecked = item.lastCheckedTime || 0;
-      if (now - lastChecked > 30 * 60 * 1000) {
-        return true;
-      }
+    // Rattrapage — match passé depuis plus de 2h non vérifié depuis 30min
+    if (item.matchStart && (now - item.matchStart) > 2 * 60 * 60 * 1000) {
+      return (now - (item.lastCheckedTime || 0)) > 30 * 60 * 1000;
     }
-
     return false;
   });
 
+  // Match non terminé dont le suivant commence dans moins d'1h
   const matchToConfirm = schedule.find(item => {
     if (item.finished) return false;
-    const nextMatch = schedule
+    const next = schedule
       .filter(s => s.matchStart > item.matchStart && !s.finished)
       .sort((a, b) => a.matchStart - b.matchStart)[0];
-    if (!nextMatch) return false;
-    const timeToNext = nextMatch.matchStart - now;
+    if (!next) return false;
+    const timeToNext = next.matchStart - now;
     return timeToNext > 0 && timeToNext < 60 * 60 * 1000;
   });
 
+  // Matchs en cours (live) — entre 0 et 2h30 après le début
   const liveMatches = schedule.filter(item => {
-    if (item.finished) return false;
-    if (!item.matchStart) return false;
+    if (item.finished || !item.matchStart) return false;
     const elapsed = now - item.matchStart;
     return elapsed > 0 && elapsed < 150 * 60 * 1000;
   });
 
-  const hasLiveMatches = liveMatches.length > 0;
-
+  // Matchs dans MATCH_DATES qui sont passés depuis 2h10+ mais absents de Firebase
   const existing = await getFirebase(env, 'officialScores') || {};
+  const existingSchedKeys = new Set(schedule.map(s => s.key));
+  const missingFromSchedule = Object.entries(MATCH_DATES).filter(([key, dateStr]) => {
+    if (existingSchedKeys.has(key)) return false;
+    const matchStart = parseMatchTime(dateStr, DEFAULT_TIMES[key] || '00:00');
+    if (!matchStart) return false;
+    return (now - matchStart) > 130 * 60 * 1000 && !existing[key];
+  });
 
-  const hasMissingFinished = await syncMissingFinishedMatches(env, schedule, existing);
+  const hasMissing = missingFromSchedule.length > 0;
 
-  if (matchesDue.length === 0 && !matchToConfirm && !hasLiveMatches && !hasMissingFinished) return;
+  if (matchesDue.length === 0 && !matchToConfirm && liveMatches.length === 0 && !hasMissing) return;
 
+  // Appelle SerpApi une seule fois
   const games = await fetchFromSerpApi(env);
   const finishedScores = parseSerpGames(games);
   const liveScores = parseLiveGames(games);
@@ -366,6 +437,7 @@ async function runSyncCycle(env) {
   let updated = false;
   const merged = { ...existing };
 
+  // Scores terminés
   Object.entries(finishedScores).forEach(([key, val]) => {
     const prev = existing[key];
     if (!prev || prev.s1 !== val.s1 || prev.s2 !== val.s2 || !prev.done) {
@@ -374,6 +446,7 @@ async function runSyncCycle(env) {
     }
   });
 
+  // Scores live — ne pas écraser un score terminé
   Object.entries(liveScores).forEach(([key, val]) => {
     const prev = existing[key];
     if (prev && prev.done) return;
@@ -383,12 +456,20 @@ async function runSyncCycle(env) {
     }
   });
 
-  if (updated) {
-    await setFirebase(env, 'officialScores', merged);
-  }
+  // Ajoute les scores des matchs absents du schedule mais déjà terminés
+  missingFromSchedule.forEach(([key]) => {
+    if (finishedScores[key] && !existing[key]) {
+      merged[key] = finishedScores[key];
+      updated = true;
+    }
+  });
 
+  if (updated) await setFirebase(env, 'officialScores', merged);
+
+  // Met à jour le schedule
   const updatedSchedule = schedule.map(item => {
-    const wasChecked = matchesDue.some(m => m.key === item.key) || liveMatches.some(m => m.key === item.key);
+    const wasChecked = matchesDue.some(m => m.key === item.key) ||
+      liveMatches.some(m => m.key === item.key);
     const newItem = {
       ...item,
       syncsExecuted: [...(item.syncsExecuted || [])],
@@ -401,7 +482,7 @@ async function runSyncCycle(env) {
       }
     });
 
-    if (merged[item.key] && merged[item.key].done && !item.finished) {
+    if (merged[item.key]?.done && !item.finished) {
       newItem.finished = true;
     }
 
@@ -409,38 +490,11 @@ async function runSyncCycle(env) {
   });
 
   await setFirebase(env, 'syncSchedule', updatedSchedule);
-
-  await fetchNextBatch(env, updatedSchedule);
 }
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-
-    if (url.pathname === '/debug-serp') {
-      const q = url.searchParams.get('q') || 'FIFA World Cup 2026';
-      const keys = [env.SERPAPI_KEY, env.SERPAPI_KEY2].filter(Boolean);
-      const key = keys[0];
-      const res = await fetch(
-        `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(q)}&api_key=${key}`
-      );
-      const data = await res.json();
-      return new Response(JSON.stringify(data.sports_results || {}, null, 2), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    if (url.pathname === '/api-status') {
-      const status = await getFirebase(env, 'apiStatus') || {};
-      return new Response(JSON.stringify({
-        activeKey: status.activeKey || 1,
-        key1Exhausted: status.key1Exhausted || false,
-        key2Exhausted: status.key2Exhausted || false,
-        allExhausted: status.allExhausted || false,
-        lastSuccess: status.lastSuccess ? new Date(status.lastSuccess).toISOString() : null,
-        key2Available: !!env.SERPAPI_KEY2
-      }, null, 2), { headers: { 'Content-Type': 'application/json' } });
-    }
 
     if (url.pathname === '/init') {
       const result = await initialize(env);
@@ -464,10 +518,42 @@ export default {
       }, null, 2), { headers: { 'Content-Type': 'application/json' } });
     }
 
+    if (url.pathname === '/api-status') {
+      const status = await getFirebase(env, 'apiStatus') || {};
+      return new Response(JSON.stringify({
+        activeKey: status.activeKey || 1,
+        key1Exhausted: status.key1Exhausted || false,
+        key2Exhausted: status.key2Exhausted || false,
+        allExhausted: status.allExhausted || false,
+        lastSuccess: status.lastSuccess ? new Date(status.lastSuccess).toISOString() : null,
+        key2Available: !!env.SERPAPI_KEY2
+      }, null, 2), { headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (url.pathname === '/debug-serp') {
+      const q = url.searchParams.get('q') || 'FIFA World Cup 2026';
+      const keys = [env.SERPAPI_KEY, env.SERPAPI_KEY2].filter(Boolean);
+      const res = await fetch(
+        `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(q)}&api_key=${keys[0]}`
+      );
+      const data = await res.json();
+      return new Response(JSON.stringify(data.sports_results || {}, null, 2), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     return new Response('Worker Coupe du Monde 2026');
   },
 
   async scheduled(event, env) {
+    const now = new Date();
+
+    // Minuit UTC → mise à jour du schedule pour les 2 prochains jours
+    if (now.getUTCHours() === 0 && now.getUTCMinutes() < 2) {
+      await scheduleCronMidnight(env);
+    }
+
+    // Synchro normale des scores
     await runSyncCycle(env);
   }
 };
