@@ -10,7 +10,7 @@ const TEAM_MAP = {
   'Netherlands': 'NED', 'Pays-Bas': 'NED', 'Japan': 'JPN', 'Japon': 'JPN',
   'Tunisia': 'TUN', 'Tunisie': 'TUN', 'Belgium': 'BEL', 'Belgique': 'BEL',
   'Egypt': 'EGY', 'Égypte': 'EGY', 'Spain': 'ESP', 'Espagne': 'ESP',
-  'Cape Verde': 'CPV', 'Cap-Vert': 'CPV', 'Iran': 'IRN',
+  'Cape Verde': 'CPV', 'Cap-Vert': 'CPV', 'Cabo Verde': 'CPV', 'Iran': 'IRN',
   'New Zealand': 'NZL', 'Nouvelle-Zélande': 'NZL', 'Saudi Arabia': 'KSA',
   'Arabie Saoudite': 'KSA', 'Uruguay': 'URU', 'France': 'FRA',
   'Senegal': 'SEN', 'Sénégal': 'SEN', 'Norway': 'NOR', 'Norvège': 'NOR',
