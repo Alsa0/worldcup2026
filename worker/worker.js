@@ -376,7 +376,7 @@ async function runSyncCycle(env) {
     return false;
   });
 
-  const matchToConfirm = schedule.find(item => {
+  /*const matchToConfirm = schedule.find(item => {
     if (item.finished) return false;
     const next = schedule
       .filter(s => s.matchStart > item.matchStart && !s.finished)
@@ -384,13 +384,13 @@ async function runSyncCycle(env) {
     if (!next) return false;
     const timeToNext = next.matchStart - now;
     return timeToNext > 0 && timeToNext < 60 * 60 * 1000;
-  });
+  });*/
 
-  const liveMatches = schedule.filter(item => {
+  /*const liveMatches = schedule.filter(item => {
     if (item.finished || !item.matchStart) return false;
     const elapsed = now - item.matchStart;
     return elapsed > 0 && elapsed < 150 * 60 * 1000;
-  });
+  });*/
 
   const existing = await getFirebase(env, 'officialScores') || {};
   const existingSchedKeys = new Set(schedule.map(s => s.key));
@@ -403,11 +403,11 @@ async function runSyncCycle(env) {
 
   const hasMissing = missingFromSchedule.length > 0;
 
-  if (matchesDue.length === 0 && !matchToConfirm && liveMatches.length === 0 && !hasMissing) return;
+  if (matchesDue.length === 0 && !hasMissing) return;
 
   const games = await fetchFromSerpApi(env);
   const finishedScores = parseSerpGames(games);
-  const liveScores = parseLiveGames(games);
+  /*const liveScores = parseLiveGames(games);*/
 
   let updated = false;
   const merged = { ...existing };
@@ -420,14 +420,14 @@ async function runSyncCycle(env) {
     }
   });
 
-  Object.entries(liveScores).forEach(([key, val]) => {
+  /*Object.entries(liveScores).forEach(([key, val]) => {
     const prev = existing[key];
     if (prev && prev.done) return;
     if (!prev || prev.s1 !== val.s1 || prev.s2 !== val.s2) {
       merged[key] = val;
       updated = true;
     }
-  });
+  });*/
 
   missingFromSchedule.forEach(([key]) => {
     if (finishedScores[key] && !existing[key]) {
