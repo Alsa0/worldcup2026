@@ -23,6 +23,12 @@
 
 <body>
 
+  <script>
+    if (window.location.search) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  </script>
+
   <header>
     <div class="logo">
       <span class="logo-trophy">🏆</span>
