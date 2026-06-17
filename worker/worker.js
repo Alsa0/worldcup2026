@@ -43,35 +43,36 @@ const GROUPS = {
 
 const KNOCKOUT_ROUNDS = ['r16', 'r8', 'qf', 'sf', 'f'];
 
+// Heures réelles en UTC du coup d'envoi (vérifiées contre le calendrier officiel FIFA 2026)
 const DEFAULT_TIMES = {
-  'A_0': '22:00', 'A_1': '05:00', 'A_2': '19:00', 'A_3': '04:00', 'A_4': '04:00', 'A_5': '04:00',
-  'B_0': '22:00', 'B_1': '22:00', 'B_2': '01:00', 'B_3': '01:00', 'B_4': '22:00', 'B_5': '22:00',
-  'C_0': '01:00', 'C_1': '04:00', 'C_2': '01:00', 'C_3': '04:00', 'C_4': '01:00', 'C_5': '01:00',
-  'D_0': '04:00', 'D_1': '07:00', 'D_2': '22:00', 'D_3': '07:00', 'D_4': '05:00', 'D_5': '05:00',
-  'E_0': '20:00', 'E_1': '02:00', 'E_2': '23:00', 'E_3': '03:00', 'E_4': '23:00', 'E_5': '23:00',
-  'F_0': '23:00', 'F_1': '05:00', 'F_2': '20:00', 'F_3': '07:00', 'F_4': '02:00', 'F_5': '02:00',
-  'G_0': '22:00', 'G_1': '04:00', 'G_2': '22:00', 'G_3': '04:00', 'G_4': '06:00', 'G_5': '06:00',
-  'H_0': '19:00', 'H_1': '01:00', 'H_2': '19:00', 'H_3': '01:00', 'H_4': '03:00', 'H_5': '03:00',
-  'I_0': '22:00', 'I_1': '01:00', 'I_2': '00:00', 'I_3': '03:00', 'I_4': '22:00', 'I_5': '22:00',
-  'J_0': '04:00', 'J_1': '07:00', 'J_2': '21:00', 'J_3': '06:00', 'J_4': '05:00', 'J_5': '05:00',
-  'K_0': '20:00', 'K_1': '05:00', 'K_2': '21:00', 'K_3': '05:00', 'K_4': '02:30', 'K_5': '02:30',
-  'L_0': '23:00', 'L_1': '02:00', 'L_2': '00:00', 'L_3': '02:00', 'L_4': '24:00', 'L_5': '00:00',
+  'A_0': '19:00', 'A_1': '02:00', 'A_2': '16:00', 'A_3': '01:00', 'A_4': '01:00', 'A_5': '01:00',
+  'B_0': '19:00', 'B_1': '19:00', 'B_2': '22:00', 'B_3': '22:00', 'B_4': '19:00', 'B_5': '19:00',
+  'C_0': '22:00', 'C_1': '01:00', 'C_2': '22:00', 'C_3': '01:00', 'C_4': '22:00', 'C_5': '22:00',
+  'D_0': '01:00', 'D_1': '04:00', 'D_2': '19:00', 'D_3': '04:00', 'D_4': '02:00', 'D_5': '02:00',
+  'E_0': '17:00', 'E_1': '23:00', 'E_2': '20:00', 'E_3': '00:00', 'E_4': '20:00', 'E_5': '20:00',
+  'F_0': '20:00', 'F_1': '02:00', 'F_2': '17:00', 'F_3': '04:00', 'F_4': '23:00', 'F_5': '23:00',
+  'G_0': '19:00', 'G_1': '01:00', 'G_2': '19:00', 'G_3': '01:00', 'G_4': '03:00', 'G_5': '03:00',
+  'H_0': '16:00', 'H_1': '22:00', 'H_2': '16:00', 'H_3': '22:00', 'H_4': '00:00', 'H_5': '00:00',
+  'I_0': '19:00', 'I_1': '22:00', 'I_2': '21:00', 'I_3': '00:00', 'I_4': '19:00', 'I_5': '19:00',
+  'J_0': '01:00', 'J_1': '04:00', 'J_2': '18:00', 'J_3': '03:00', 'J_4': '02:00', 'J_5': '02:00',
+  'K_0': '17:00', 'K_1': '02:00', 'K_2': '18:00', 'K_3': '02:00', 'K_4': '23:30', 'K_5': '23:30',
+  'L_0': '20:00', 'L_1': '23:00', 'L_2': '21:00', 'L_3': '23:00', 'L_4': '21:00', 'L_5': '21:00',
 };
 
 
 const MATCH_DATES = {
   'A_0': 'Jun 11', 'A_1': 'Jun 12', 'A_2': 'Jun 18', 'A_3': 'Jun 19', 'A_4': 'Jun 25', 'A_5': 'Jun 25',
-  'B_0': 'Jun 12', 'B_1': 'Jun 13', 'B_2': 'Jun 18', 'B_3': 'Jun 18', 'B_4': 'Jun 24', 'B_5': 'Jun 24',
-  'C_0': 'Jun 13', 'C_1': 'Jun 14', 'C_2': 'Jun 19', 'C_3': 'Jun 20', 'C_4': 'Jun 24', 'C_5': 'Jun 24',
+  'B_0': 'Jun 12', 'B_1': 'Jun 13', 'B_2': 'Jun 17', 'B_3': 'Jun 17', 'B_4': 'Jun 24', 'B_5': 'Jun 24',
+  'C_0': 'Jun 12', 'C_1': 'Jun 14', 'C_2': 'Jun 18', 'C_3': 'Jun 20', 'C_4': 'Jun 23', 'C_5': 'Jun 23',
   'D_0': 'Jun 13', 'D_1': 'Jun 14', 'D_2': 'Jun 19', 'D_3': 'Jun 20', 'D_4': 'Jun 26', 'D_5': 'Jun 26',
-  'E_0': 'Jun 14', 'E_1': 'Jun 15', 'E_2': 'Jun 20', 'E_3': 'Jun 21', 'E_4': 'Jun 25', 'E_5': 'Jun 25',
-  'F_0': 'Jun 14', 'F_1': 'Jun 15', 'F_2': 'Jun 20', 'F_3': 'Jun 21', 'F_4': 'Jun 26', 'F_5': 'Jun 26',
+  'E_0': 'Jun 14', 'E_1': 'Jun 14', 'E_2': 'Jun 20', 'E_3': 'Jun 21', 'E_4': 'Jun 25', 'E_5': 'Jun 25',
+  'F_0': 'Jun 14', 'F_1': 'Jun 15', 'F_2': 'Jun 20', 'F_3': 'Jun 21', 'F_4': 'Jun 25', 'F_5': 'Jun 25',
   'G_0': 'Jun 15', 'G_1': 'Jun 16', 'G_2': 'Jun 21', 'G_3': 'Jun 22', 'G_4': 'Jun 27', 'G_5': 'Jun 27',
-  'H_0': 'Jun 15', 'H_1': 'Jun 16', 'H_2': 'Jun 21', 'H_3': 'Jun 22', 'H_4': 'Jun 27', 'H_5': 'Jun 27',
-  'I_0': 'Jun 16', 'I_1': 'Jun 17', 'I_2': 'Jun 22', 'I_3': 'Jun 23', 'I_4': 'Jun 26', 'I_5': 'Jun 26',
+  'H_0': 'Jun 15', 'H_1': 'Jun 15', 'H_2': 'Jun 21', 'H_3': 'Jun 21', 'H_4': 'Jun 27', 'H_5': 'Jun 27',
+  'I_0': 'Jun 16', 'I_1': 'Jun 16', 'I_2': 'Jun 21', 'I_3': 'Jun 23', 'I_4': 'Jun 26', 'I_5': 'Jun 26',
   'J_0': 'Jun 17', 'J_1': 'Jun 17', 'J_2': 'Jun 22', 'J_3': 'Jun 23', 'J_4': 'Jun 28', 'J_5': 'Jun 28',
-  'K_0': 'Jun 17', 'K_1': 'Jun 18', 'K_2': 'Jun 23', 'K_3': 'Jun 24', 'K_4': 'Jun 28', 'K_5': 'Jun 28',
-  'L_0': 'Jun 17', 'L_1': 'Jun 18', 'L_2': 'Jun 23', 'L_3': 'Jun 24', 'L_4': 'Jun 27', 'L_5': 'Jun 27',
+  'K_0': 'Jun 17', 'K_1': 'Jun 18', 'K_2': 'Jun 23', 'K_3': 'Jun 24', 'K_4': 'Jun 27', 'K_5': 'Jun 27',
+  'L_0': 'Jun 17', 'L_1': 'Jun 17', 'L_2': 'Jun 22', 'L_3': 'Jun 23', 'L_4': 'Jun 26', 'L_5': 'Jun 26',
 };
 
 function findMatchKey(t1, t2) {
@@ -179,7 +180,10 @@ function buildScheduleEntries(matchKeys, serpTimes, existingKeys) {
     if (!matchStart) return;
 
     const knockout = isKnockoutKey(key);
-    const offsets = knockout ? [120, 130, 160, 175] : [120, 130];
+    // 60 = check à la mi-temps du temps réglementaire (live, pour mettre à jour le classement)
+    // 120/130 = check fin de match (90min + arrêts de jeu)
+    // 160/175 = check après prolongation/tirs au but (knockout uniquement)
+    const offsets = knockout ? [60, 120, 130, 160, 175] : [60, 120, 130];
     const syncTimes = offsets.map(m => matchStart + m * 60 * 1000);
 
     entries.push({
@@ -376,21 +380,21 @@ async function runSyncCycle(env) {
     return false;
   });
 
-  /*const matchToConfirm = schedule.find(item => {
+  // Garde-fou: si un match n'est pas encore confirmé "terminé" et qu'un autre
+  // match démarre dans moins d'1h, on force une dernière vérification avant
+  // que l'attention de SerpApi ne bascule sur le nouveau match. Ça ne se
+  // déclenche que dans ce cas précis (matchs rapprochés), donc ça ne boucle pas.
+  const matchToConfirm = schedule.find(item => {
     if (item.finished) return false;
+    if (matchesDue.some(m => m.key === item.key)) return false;
     const next = schedule
       .filter(s => s.matchStart > item.matchStart && !s.finished)
       .sort((a, b) => a.matchStart - b.matchStart)[0];
     if (!next) return false;
     const timeToNext = next.matchStart - now;
     return timeToNext > 0 && timeToNext < 60 * 60 * 1000;
-  });*/
-
-  /*const liveMatches = schedule.filter(item => {
-    if (item.finished || !item.matchStart) return false;
-    const elapsed = now - item.matchStart;
-    return elapsed > 0 && elapsed < 150 * 60 * 1000;
-  });*/
+  });
+  if (matchToConfirm) matchesDue.push(matchToConfirm);
 
   const existing = await getFirebase(env, 'officialScores') || {};
   const existingSchedKeys = new Set(schedule.map(s => s.key));
@@ -407,7 +411,7 @@ async function runSyncCycle(env) {
 
   const games = await fetchFromSerpApi(env);
   const finishedScores = parseSerpGames(games);
-  /*const liveScores = parseLiveGames(games);*/
+  const liveScores = parseLiveGames(games);
 
   let updated = false;
   const merged = { ...existing };
@@ -420,14 +424,14 @@ async function runSyncCycle(env) {
     }
   });
 
-  /*Object.entries(liveScores).forEach(([key, val]) => {
+  Object.entries(liveScores).forEach(([key, val]) => {
     const prev = existing[key];
     if (prev && prev.done) return;
     if (!prev || prev.s1 !== val.s1 || prev.s2 !== val.s2) {
       merged[key] = val;
       updated = true;
     }
-  });*/
+  });
 
   missingFromSchedule.forEach(([key]) => {
     if (finishedScores[key] && !existing[key]) {
@@ -439,8 +443,7 @@ async function runSyncCycle(env) {
   if (updated) await setFirebase(env, 'officialScores', merged);
 
   const updatedSchedule = schedule.map(item => {
-    const wasChecked = matchesDue.some(m => m.key === item.key) ||
-      liveMatches.some(m => m.key === item.key);
+    const wasChecked = matchesDue.some(m => m.key === item.key);
     const newItem = {
       ...item,
       syncsExecuted: [...(item.syncsExecuted || [])],
