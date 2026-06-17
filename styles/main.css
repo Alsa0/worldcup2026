@@ -298,7 +298,6 @@ main {
   display: grid;
   grid-template-columns: 1fr;
   gap: 6px;
-  padding: 10px 20px;
 }
 
 .match-row {
