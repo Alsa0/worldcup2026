@@ -14,20 +14,14 @@
   <meta property="og:title" content="World Cup 2026 — Simulateur & Tracker">
   <meta property="og:description"
     content="Scores officiels en direct et simulation du Mondial 2026 : qui va se qualifier ?">
-  <meta property="og:image" content="https://mondial-26.pages.dev/assets/og-poster.png">
+  <meta property="og:image" content="https://mondial-26.pages.dev/assets/images.png">
   <meta property="og:url" content="https://mondial-26.pages.dev/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://mondial-26.pages.dev/assets/og-poster.png">
+  <meta name="twitter:image" content="https://mondial-26.pages.dev/assets/images.png">
 </head>
 
 <body>
-
-  <script>
-    if (window.location.search) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  </script>
 
   <header>
     <div class="logo">
@@ -116,6 +110,11 @@
 
   <div class="toast" id="toast"></div>
 
+  <script>
+    if (window.location.search) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  </script>
   <script src="src/models/data.js"></script>
   <script src="src/services/StorageService.js"></script>
   <script src="src/services/FirebaseService.js"></script>
