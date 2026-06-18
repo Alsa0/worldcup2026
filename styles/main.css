@@ -298,6 +298,7 @@ main {
   display: grid;
   grid-template-columns: 1fr;
   gap: 6px;
+  padding: 5px 5px;
 }
 
 .match-row {
@@ -308,6 +309,9 @@ main {
   background: var(--surface2);
   border-radius: 6px;
   border: 1px solid var(--border);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .match-date {
@@ -323,17 +327,23 @@ main {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   justify-content: center;
+  overflow: hidden;
 }
 
 .match-team {
   font-size: 12px;
   font-weight: 500;
   text-align: center;
-  width: 50px;
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: 'Barlow Condensed', sans-serif;
   letter-spacing: 0.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .match-team.winner {
@@ -345,6 +355,7 @@ main {
   display: flex;
   gap: 2px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .score-separator {
@@ -802,8 +813,13 @@ tr.third-place td:first-child {
 }
 
 @media (max-width: 800px) {
+  main {
+    padding: 14px;
+  }
+
   .groups-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
 
   header {
@@ -813,7 +829,12 @@ tr.third-place td:first-child {
     padding: 12px 16px;
   }
 
-  /* Ligne 1 : logo à gauche, boutons d'action à droite (les deux sont courts, tiennent ensemble) */
+  .section-title {
+    font-size: 15px;
+    letter-spacing: 1px;
+    gap: 8px;
+  }
+
   .logo {
     order: 1;
     gap: 10px;
@@ -824,12 +845,13 @@ tr.third-place td:first-child {
   }
 
   .logo-text h1 {
-    font-size: 20px;
+    font-size: 16px;
+    letter-spacing: 1px;
   }
 
   .logo-text span {
     font-size: 9px;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
   }
 
   .header-actions {
@@ -886,8 +908,18 @@ tr.third-place td:first-child {
 }
 
 @media (max-width: 420px) {
+  .logo-text h1 {
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+
   .logo-text span {
-    display: none;
+    font-size: 7px;
+    letter-spacing: 1px;
+  }
+
+  .logo-trophy {
+    font-size: 20px;
   }
 
   .header-actions .btn {
@@ -898,5 +930,120 @@ tr.third-place td:first-child {
   .sim-banner .btn-gold {
     font-size: 12px;
     padding: 10px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  main {
+    padding: 10px;
+  }
+
+  /* 2 colonnes même sur petit téléphone : on compacte au maximum plutôt que d'empiler en 1 colonne */
+  .groups-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .group-header {
+    padding: 8px 8px;
+  }
+
+  .group-letter {
+    font-size: 18px;
+  }
+
+  .group-label {
+    font-size: 8px;
+  }
+
+  .standings-table th,
+  .standings-table td {
+    padding: 5px 4px;
+    font-size: 11px;
+  }
+
+  .match-row {
+    padding: 5px 6px;
+    gap: 3px;
+  }
+
+  .match-date {
+    width: 22px;
+    font-size: 8px;
+  }
+
+  .match-teams {
+    gap: 2px;
+  }
+
+  .match-team {
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+
+  .match-team img {
+    width: 12px !important;
+    height: 9px !important;
+  }
+
+  .match-score span {
+    font-size: 13px !important;
+    min-width: 13px !important;
+  }
+
+  .score-separator {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 700px) {
+  .bracket {
+    min-width: auto;
+    height: 1100px;
+    gap: 20px;
+  }
+
+  .bracket-round {
+    flex: 0 0 43vw;
+    min-width: 43vw;
+  }
+
+  .bracket-round-title {
+    font-size: 12px;
+    padding: 6px;
+    margin-bottom: 6px;
+  }
+
+  .bracket-match {
+    max-height: 58px;
+  }
+
+  .bracket-team {
+    padding: 4px 6px;
+    gap: 4px;
+    min-height: 22px;
+  }
+
+  .bracket-team-flag {
+    min-width: 16px;
+  }
+
+  .bracket-team-flag img {
+    width: 14px !important;
+    height: 10px !important;
+  }
+
+  .bracket-team-name {
+    font-size: 10px;
+  }
+
+  .bracket-team-score {
+    font-size: 13px;
+    min-width: 14px;
+  }
+
+  .bracket-match-meta {
+    font-size: 7px;
+    padding: 2px 6px;
   }
 }
