@@ -43,7 +43,6 @@ const GROUPS = {
 
 const KNOCKOUT_ROUNDS = ['r16', 'r8', 'qf', 'sf', 'f'];
 
-// Heures réelles en UTC du coup d'envoi (vérifiées contre le calendrier officiel FIFA 2026)
 const DEFAULT_TIMES = {
   'A_0': '21:00', 'A_1': '04:00', 'A_2': '18:00', 'A_3': '03:00', 'A_4': '03:00', 'A_5': '03:00',
   'B_0': '23:00', 'B_1': '23:00', 'B_2': '00:00', 'B_3': '00:00', 'B_4': '23:00', 'B_5': '23:00',
@@ -180,10 +179,7 @@ function buildScheduleEntries(matchKeys, serpTimes, existingKeys) {
     if (!matchStart) return;
 
     const knockout = isKnockoutKey(key);
-    // 60 = check à la mi-temps du temps réglementaire (live, pour mettre à jour le classement)
-    // 120/130 = check fin de match (90min + arrêts de jeu)
-    // 160/175 = check après prolongation/tirs au but (knockout uniquement)
-    const offsets = knockout ? [60, 120, 130, 160, 175] : [60, 120, 130];
+    const offsets = knockout ? [60, 120, 130] : [60, 120, 130];
     const syncTimes = offsets.map(m => matchStart + m * 60 * 1000);
 
     entries.push({
@@ -380,10 +376,7 @@ async function runSyncCycle(env) {
     return false;
   });
 
-  // Garde-fou: si un match n'est pas encore confirmé "terminé" et qu'un autre
-  // match démarre dans moins d'1h, on force une dernière vérification avant
-  // que l'attention de SerpApi ne bascule sur le nouveau match. Ça ne se
-  // déclenche que dans ce cas précis (matchs rapprochés), donc ça ne boucle pas.
+
   const matchToConfirm = schedule.find(item => {
     if (item.finished) return false;
     if (matchesDue.some(m => m.key === item.key)) return false;

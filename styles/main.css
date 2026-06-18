@@ -865,7 +865,6 @@ tr.third-place td:first-child {
     font-size: 11px;
   }
 
-  /* Ligne 2 : les onglets, pleine largeur, en "pilule" pour bien les distinguer des boutons */
   .nav-tabs {
     order: 3;
     flex-basis: 100%;
@@ -938,7 +937,6 @@ tr.third-place td:first-child {
     padding: 10px;
   }
 
-  /* 2 colonnes même sur petit téléphone : on compacte au maximum plutôt que d'empiler en 1 colonne */
   .groups-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 6px;
