@@ -223,22 +223,21 @@ function mergeGames(games1, data1, games2, data2) {
   return allGames;
 }
 
-async function fetchFromSerpApi(env) {
+async function fetchFromSerpApi(env, mode = 'results') {
   const keys = [env.SERPAPI_KEY, env.SERPAPI_KEY2].filter(Boolean);
+  const query = mode === 'live' ? 'FIFA World Cup 2026' : 'FIFA World Cup 2026 results';
 
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i];
     try {
-      const { data: data1, status: status1 } = await fetchWithKey(key, 'FIFA World Cup 2026');
-      if (isQuotaError(data1, status1)) {
+      const { data, status } = await fetchWithKey(key, query);
+      if (isQuotaError(data, status)) {
         await setFirebase(env, `apiStatus/key${i + 1}`, { exhausted: true, at: Date.now() });
         continue;
       }
 
-      const { data: data2 } = await fetchWithKey(key, 'FIFA World Cup 2026 results');
-      const games1 = data1.sports_results?.games || [];
-      const games2 = data2.sports_results?.games || [];
-      const allGames = mergeGames(games1, data1, games2, data2);
+      const games = data.sports_results?.games || [];
+      if (data.sports_results?.game_spotlight) games.push(data.sports_results.game_spotlight);
 
       await setFirebase(env, 'apiStatus', {
         activeKey: i + 1, key1Exhausted: i > 0,
@@ -246,7 +245,7 @@ async function fetchFromSerpApi(env) {
         lastSuccess: Date.now()
       });
 
-      return allGames;
+      return games;
     } catch (e) { continue; }
   }
 
@@ -402,7 +401,14 @@ async function runSyncCycle(env) {
 
   if (matchesDue.length === 0 && !hasMissing) return;
 
-  const games = await fetchFromSerpApi(env);
+  const isOnlyLiveSync = !hasMissing && matchesDue.every(item => {
+    const due = (item.syncTimes || []).filter(t =>
+      t <= now + WINDOW && t >= now - WINDOW &&
+      !(item.syncsExecuted || []).includes(t)
+    );
+    return due.length > 0 && due.every(t => item.matchStart && (t - item.matchStart) <= 65 * 60 * 1000);
+  });
+  const games = await fetchFromSerpApi(env, isOnlyLiveSync ? 'live' : 'results');
   const finishedScores = parseSerpGames(games);
   const liveScores = parseLiveGames(games);
 
