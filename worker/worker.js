@@ -179,7 +179,7 @@ function buildScheduleEntries(matchKeys, serpTimes, existingKeys) {
     if (!matchStart) return;
 
     const knockout = isKnockoutKey(key);
-    const offsets = knockout ? [60, 120, 130] : [60, 120, 130];
+    const offsets = knockout ? [60, 120, 130, 160, 175] : [60, 120, 130];
     const syncTimes = offsets.map(m => matchStart + m * 60 * 1000);
 
     entries.push({
