@@ -160,33 +160,33 @@ const GROUPS = {
 };
 
 const BEST_THIRD_SLOTS = [
-  { matchIdx: 0,  position: 't2', allowedGroups: ['A', 'B', 'C', 'D', 'F'] },
-  { matchIdx: 1,  position: 't1', allowedGroups: ['C', 'D', 'F', 'G', 'H'] },
-  { matchIdx: 6,  position: 't1', allowedGroups: ['B', 'E', 'F', 'I', 'J'] },
-  { matchIdx: 7,  position: 't1', allowedGroups: ['A', 'E', 'H', 'I', 'J'] },
-  { matchIdx: 10, position: 't2', allowedGroups: ['C', 'E', 'F', 'H', 'I'] },
-  { matchIdx: 11, position: 't1', allowedGroups: ['E', 'H', 'I', 'J', 'K'] },
-  { matchIdx: 12, position: 't1', allowedGroups: ['E', 'F', 'G', 'I', 'J'] },
-  { matchIdx: 13, position: 't1', allowedGroups: ['D', 'E', 'I', 'J', 'L'] },
+  { matchIdx: 0, position: 't2', allowedGroups: ['A', 'C', 'D', 'F'] },
+  { matchIdx: 1, position: 't1', allowedGroups: ['C', 'F', 'G', 'H'] },
+  { matchIdx: 6, position: 't1', allowedGroups: ['B', 'E', 'F', 'I'] },
+  { matchIdx: 7, position: 't1', allowedGroups: ['A', 'H', 'I', 'J'] },
+  { matchIdx: 10, position: 't2', allowedGroups: ['B', 'C', 'E', 'H'] },
+  { matchIdx: 11, position: 't1', allowedGroups: ['H', 'J', 'K', 'L'] },
+  { matchIdx: 12, position: 't1', allowedGroups: ['E', 'F', 'G', 'J'] },
+  { matchIdx: 13, position: 't1', allowedGroups: ['D', 'E', 'I', 'L'] },
 ];
 
 const R16_PAIRS = [
-  { label: '1E vs 3e(ABCDF)',  d: '29/06' },
-  { label: '3e(CDFGH) vs 1I', d: '30/06' },
-  { label: '2A vs 2B',         d: '28/06' },
-  { label: '1F vs 2C',         d: '30/06' },
-  { label: '2K vs 2L',         d: '03/07' },
-  { label: '1H vs 2J',         d: '02/07' },
-  { label: '3e(BEFIJ) vs 1D',  d: '02/07' },
-  { label: '3e(AEHIJ) vs 1G',  d: '01/07' },
-  { label: '1C vs 2F',         d: '29/06' },
-  { label: '2E vs 2I',         d: '30/06' },
-  { label: '1A vs 3e(CEFHI)',  d: '01/07' },
-  { label: '3e(EHIJK) vs 1L',  d: '01/07' },
-  { label: '3e(EFGIJ) vs 1B',  d: '03/07' },
-  { label: '3e(DEIJL) vs 1K',  d: '04/07' },
-  { label: '1J vs 2H',         d: '04/07' },
-  { label: '2D vs 2G',         d: '03/07' },
+  { label: '1E vs 3e(ACDF)', d: '29/06' },
+  { label: '3e(CFGH) vs 1I', d: '30/06' },
+  { label: '2A vs 2B', d: '28/06' },
+  { label: '1F vs 2C', d: '30/06' },
+  { label: '2K vs 2L', d: '03/07' },
+  { label: '1H vs 2J', d: '02/07' },
+  { label: '3e(BEFI) vs 1D', d: '02/07' },
+  { label: '3e(AHIJ) vs 1G', d: '01/07' },
+  { label: '1C vs 2F', d: '29/06' },
+  { label: '2E vs 2I', d: '30/06' },
+  { label: '1A vs 3e(BCEH)', d: '01/07' },
+  { label: '3e(HJKL) vs 1L', d: '01/07' },
+  { label: '3e(EFGJ) vs 1B', d: '03/07' },
+  { label: '3e(DEIL) vs 1K', d: '04/07' },
+  { label: '1J vs 2H', d: '04/07' },
+  { label: '2D vs 2G', d: '03/07' },
 ];
 
 const GROUP_MAP = [
@@ -210,22 +210,22 @@ const GROUP_MAP = [
 
 const ROUND_LABELS = {
   r16: '16es de finale',
-  r8:  '8es de finale',
-  qf:  'Quarts de finale',
-  sf:  'Demi-finales',
-  f:   'FINALE'
+  r8: '8es de finale',
+  qf: 'Quarts de finale',
+  sf: 'Demi-finales',
+  f: 'FINALE'
 };
 
 const ROUND_DATES = {
   r16: ['29/06', '30/06', '01/07', '02/07', '03/07', '04/07'],
-  r8:  ['05/07', '06/07', '07/07'],
-  qf:  ['09/07', '10/07'],
-  sf:  ['14/07'],
-  f:   ['19/07']
+  r8: ['05/07', '06/07', '07/07'],
+  qf: ['09/07', '10/07'],
+  sf: ['14/07'],
+  f: ['19/07']
 };
 
-const KNOCKOUT_ROUNDS  = ['r16', 'r8', 'qf', 'sf', 'f'];
-const KNOCKOUT_SIZES   = [16, 8, 4, 2, 1];
+const KNOCKOUT_ROUNDS = ['r16', 'r8', 'qf', 'sf', 'f'];
+const KNOCKOUT_SIZES = [16, 8, 4, 2, 1];
 
 function teamName(code) {
   return TEAM_NAMES[code] || code;

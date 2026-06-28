@@ -4,13 +4,20 @@ const Knockout = {
   },
 
   assignBestThirds(bestThirds) {
+    // Trier par nombre de slots disponibles (le moins de slots = priorité haute)
+    const sorted = [...bestThirds].sort((a, b) => {
+      const slotsA = BEST_THIRD_SLOTS.filter(s => s.allowedGroups.includes(a.group)).length;
+      const slotsB = BEST_THIRD_SLOTS.filter(s => s.allowedGroups.includes(b.group)).length;
+      return slotsA - slotsB;
+    });
+
     const assignment = new Array(BEST_THIRD_SLOTS.length).fill(null);
     const used = new Set();
 
     function backtrack(slotIdx) {
       if (slotIdx === BEST_THIRD_SLOTS.length) return true;
       const slot = BEST_THIRD_SLOTS[slotIdx];
-      for (const team of bestThirds) {
+      for (const team of sorted) {
         if (used.has(team.group)) continue;
         if (!slot.allowedGroups.includes(team.group)) continue;
         assignment[slotIdx] = team;
@@ -63,7 +70,7 @@ const Knockout = {
 
   propagate(knockout) {
     for (let ri = 0; ri < KNOCKOUT_ROUNDS.length - 1; ri++) {
-      const cur  = KNOCKOUT_ROUNDS[ri];
+      const cur = KNOCKOUT_ROUNDS[ri];
       const next = KNOCKOUT_ROUNDS[ri + 1];
       const size = KNOCKOUT_SIZES[ri];
 
