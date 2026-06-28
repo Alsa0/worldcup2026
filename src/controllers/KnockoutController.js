@@ -8,22 +8,23 @@ const KnockoutController = {
       return;
     }
 
-    if (m.official) {
+    const isOff = SyncService.isKnockoutOfficial(App.state.officialKnockout, round, idx);
+    if (isOff) {
       App.showToast('Ce résultat est officiel 🔒', 'error');
       return;
     }
 
-    document.getElementById('modalTitle').textContent  = `${ROUND_LABELS[round]} — Match ${idx + 1}`;
-    document.getElementById('modalTeam1').innerHTML    = `${teamFlag(m.t1, 24)} ${teamName(m.t1)}`;
-    document.getElementById('modalTeam2').innerHTML    = `${teamFlag(m.t2, 24)} ${teamName(m.t2)}`;
-    document.getElementById('modalScore1').value       = m.done ? m.s1 : 0;
-    document.getElementById('modalScore2').value       = m.done ? m.s2 : 0;
+    document.getElementById('modalTitle').textContent = `${ROUND_LABELS[round]} — Match ${idx + 1}`;
+    document.getElementById('modalTeam1').innerHTML = `${teamFlag(m.t1, 24)} ${teamName(m.t1)}`;
+    document.getElementById('modalTeam2').innerHTML = `${teamFlag(m.t2, 24)} ${teamName(m.t2)}`;
+    document.getElementById('modalScore1').value = m.done ? m.s1 : 0;
+    document.getElementById('modalScore2').value = m.done ? m.s2 : 0;
 
     const penSec = document.getElementById('penaltySection');
     const hasPen = m.done && m.pen1 !== null && m.pen1 !== undefined;
     penSec.style.display = hasPen ? 'block' : 'none';
-    document.getElementById('modalPen1').value         = m.pen1 ?? 0;
-    document.getElementById('modalPen2').value         = m.pen2 ?? 0;
+    document.getElementById('modalPen1').value = m.pen1 ?? 0;
+    document.getElementById('modalPen2').value = m.pen2 ?? 0;
     document.getElementById('modalPenTeam1').innerHTML = teamFlag(m.t1, 16);
     document.getElementById('modalPenTeam2').innerHTML = teamFlag(m.t2, 16);
 

@@ -42,6 +42,7 @@ const GROUPS = {
 };
 
 const KNOCKOUT_ROUNDS = ['r16', 'r8', 'qf', 'sf', 'f'];
+const KNOCKOUT_SIZES = [16, 8, 4, 2, 1];
 
 const DEFAULT_TIMES = {
   'A_0': '21:00', 'A_1': '04:00', 'A_2': '18:00', 'A_3': '03:00', 'A_4': '03:00', 'A_5': '03:00',
@@ -121,6 +122,8 @@ function formatDate(date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
+// ─── Parse scores groupes ─────────────────────────────────────────────────────
+
 function parseSerpGames(games) {
   const scores = {};
   games.forEach(g => {
@@ -153,6 +156,155 @@ function parseLiveGames(games) {
   return scores;
 }
 
+// ─── Parse scores knockout ────────────────────────────────────────────────────
+
+/**
+ * Cherche dans officialKnockout le match correspondant à t1/t2.
+ * Retourne { round, idx } ou null.
+ */
+function findKnockoutMatchKey(t1, t2, officialKnockout) {
+  for (const round of KNOCKOUT_ROUNDS) {
+    const roundData = officialKnockout?.[round];
+    if (!roundData) continue;
+    for (const [idx, m] of Object.entries(roundData)) {
+      if (!m || !m.t1 || !m.t2) continue;
+      if ((m.t1 === t1 && m.t2 === t2) || (m.t1 === t2 && m.t2 === t1)) {
+        return { round, idx: parseInt(idx) };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Parse les tirs au but depuis SerpApi.
+ * SerpApi peut retourner un champ "penalty" ou encoder "3 (5)" dans le score.
+ */
+function extractPenalties(team) {
+  // Cas 1 : champ penalty explicite
+  if (team.penalty !== undefined && team.penalty !== null) {
+    const p = parseInt(team.penalty);
+    return isNaN(p) ? null : p;
+  }
+  // Cas 2 : score encodé "3 (5)"
+  if (typeof team.score === 'string') {
+    const match = team.score.match(/\((\d+)\)/);
+    if (match) return parseInt(match[1]);
+  }
+  return null;
+}
+
+function parseKnockoutFinished(games, officialKnockout) {
+  const scores = {};
+  games.forEach(g => {
+    if (!isFinished(g.status)) return;
+    if (!g.teams || g.teams.length < 2) return;
+    const t1 = toCode(g.teams[0].name);
+    const t2 = toCode(g.teams[1].name);
+    if (!t1 || !t2) return;
+
+    // Score de base (temps réglementaire)
+    const s1 = parseInt(g.teams[0].score);
+    const s2 = parseInt(g.teams[1].score);
+    if (isNaN(s1) || isNaN(s2)) return;
+
+    // Ce match est-il dans officialKnockout ?
+    const found = findKnockoutMatchKey(t1, t2, officialKnockout);
+    if (!found) return;
+
+    const { round, idx } = found;
+
+    // Tirs au but
+    const pen1 = extractPenalties(g.teams[0]);
+    const pen2 = extractPenalties(g.teams[1]);
+
+    // Déterminer le vainqueur
+    let winner;
+    if (s1 !== s2) {
+      winner = s1 > s2 ? t1 : t2;
+    } else if (pen1 !== null && pen2 !== null && pen1 !== pen2) {
+      winner = pen1 > pen2 ? t1 : t2;
+    } else {
+      winner = null; // match pas encore tranché (ne devrait pas arriver sur FT)
+    }
+
+    if (!scores[round]) scores[round] = {};
+    scores[round][idx] = {
+      t1, t2, s1, s2,
+      pen1: pen1 ?? null,
+      pen2: pen2 ?? null,
+      done: true, official: true, winner
+    };
+  });
+  return scores;
+}
+
+function parseKnockoutLive(games, officialKnockout) {
+  const scores = {};
+  games.forEach(g => {
+    if (!isLive(g.status)) return;
+    if (!g.teams || g.teams.length < 2) return;
+    const t1 = toCode(g.teams[0].name);
+    const t2 = toCode(g.teams[1].name);
+    if (!t1 || !t2) return;
+
+    const s1 = parseInt(g.teams[0].score);
+    const s2 = parseInt(g.teams[1].score);
+    if (isNaN(s1) || isNaN(s2)) return;
+
+    const found = findKnockoutMatchKey(t1, t2, officialKnockout);
+    if (!found) return;
+
+    const { round, idx } = found;
+    if (!scores[round]) scores[round] = {};
+    scores[round][idx] = {
+      t1, t2, s1, s2,
+      pen1: null, pen2: null,
+      done: false, official: true, live: true, status: g.status
+    };
+  });
+  return scores;
+}
+
+/**
+ * Propage les vainqueurs de chaque round vers le round suivant.
+ * Peuple t1/t2 des matchs du tour suivant automatiquement.
+ */
+function propagateOfficialKnockout(officialKnockout) {
+  for (let ri = 0; ri < KNOCKOUT_ROUNDS.length - 1; ri++) {
+    const cur = KNOCKOUT_ROUNDS[ri];
+    const next = KNOCKOUT_ROUNDS[ri + 1];
+    const size = KNOCKOUT_SIZES[ri];
+
+    if (!officialKnockout[cur]) continue;
+    if (!officialKnockout[next]) officialKnockout[next] = {};
+
+    for (let i = 0; i < size; i++) {
+      const m = officialKnockout[cur][i];
+      if (!m || !m.done || !m.winner) continue;
+
+      const ni = Math.floor(i / 2);
+      if (!officialKnockout[next][ni]) {
+        officialKnockout[next][ni] = {
+          t1: null, t2: null,
+          s1: null, s2: null,
+          pen1: null, pen2: null,
+          done: false, official: true, winner: null
+        };
+      }
+
+      const nm = officialKnockout[next][ni];
+      if (!nm.done) {
+        if (i % 2 === 0) nm.t1 = m.winner;
+        if (i % 2 === 1) nm.t2 = m.winner;
+      }
+    }
+  }
+  return officialKnockout;
+}
+
+// ─── SerpApi ──────────────────────────────────────────────────────────────────
+
 function extractTimesFromSerp(games) {
   const times = {};
   games.forEach(g => {
@@ -170,18 +322,14 @@ function buildScheduleEntries(matchKeys, serpTimes, existingKeys) {
   const entries = [];
   matchKeys.forEach(key => {
     if (existingKeys.has(key)) return;
-
     const dateStr = MATCH_DATES[key];
     if (!dateStr) return;
-
     const timeStr = serpTimes[key] || DEFAULT_TIMES[key] || '00:00';
     const matchStart = parseMatchTime(dateStr, timeStr);
     if (!matchStart) return;
-
     const knockout = isKnockoutKey(key);
     const offsets = knockout ? [60, 120, 130, 160, 175] : [60, 120, 130];
     const syncTimes = offsets.map(m => matchStart + m * 60 * 1000);
-
     entries.push({
       key, matchStart, syncTimes,
       finished: false, knockout,
@@ -207,22 +355,6 @@ async function fetchWithKey(key, query) {
   return { data, status: res.status };
 }
 
-function mergeGames(games1, data1, games2, data2) {
-  const allGames = [...games1];
-  if (data1.sports_results?.game_spotlight) allGames.push(data1.sports_results.game_spotlight);
-  if (data2.sports_results?.game_spotlight) allGames.push(data2.sports_results.game_spotlight);
-  games2.forEach(g2 => {
-    if (!g2.teams || g2.teams.length < 2) return;
-    const exists = allGames.some(g1 => {
-      if (!g1.teams || g1.teams.length < 2) return false;
-      return (g1.teams[0].name === g2.teams[0].name && g1.teams[1].name === g2.teams[1].name) ||
-        (g1.teams[0].name === g2.teams[1].name && g1.teams[1].name === g2.teams[0].name);
-    });
-    if (!exists) allGames.push(g2);
-  });
-  return allGames;
-}
-
 async function fetchFromSerpApi(env, mode = 'results') {
   const keys = [env.SERPAPI_KEY, env.SERPAPI_KEY2].filter(Boolean);
   const query = mode === 'live' ? 'FIFA World Cup 2026' : 'FIFA World Cup 2026 results';
@@ -235,16 +367,13 @@ async function fetchFromSerpApi(env, mode = 'results') {
         await setFirebase(env, `apiStatus/key${i + 1}`, { exhausted: true, at: Date.now() });
         continue;
       }
-
       const games = data.sports_results?.games || [];
       if (data.sports_results?.game_spotlight) games.push(data.sports_results.game_spotlight);
-
       await setFirebase(env, 'apiStatus', {
         activeKey: i + 1, key1Exhausted: i > 0,
         key2Exhausted: false, allExhausted: false,
         lastSuccess: Date.now()
       });
-
       return games;
     } catch (e) { continue; }
   }
@@ -255,6 +384,8 @@ async function fetchFromSerpApi(env, mode = 'results') {
   });
   return [];
 }
+
+// ─── Firebase ─────────────────────────────────────────────────────────────────
 
 async function getFirebase(env, path) {
   try {
@@ -272,18 +403,16 @@ async function setFirebase(env, path, data) {
   });
 }
 
+// ─── Schedule ─────────────────────────────────────────────────────────────────
+
 async function updateScheduleForDays(env, date1, date2, existingSchedule, serpGames) {
   const existingKeys = new Set(existingSchedule.map(s => s.key));
   const serpTimes = extractTimesFromSerp(serpGames);
-
   const keysDay1 = getMatchKeysForDate(formatDate(date1));
   const keysDay2 = date2 ? getMatchKeysForDate(formatDate(date2)) : [];
   const allKeys = [...keysDay1, ...keysDay2];
-
   const newEntries = buildScheduleEntries(allKeys, serpTimes, existingKeys);
-
   if (newEntries.length === 0) return existingSchedule;
-
   const updatedSchedule = [...existingSchedule, ...newEntries];
   await setFirebase(env, 'syncSchedule', updatedSchedule);
   return updatedSchedule;
@@ -293,7 +422,6 @@ async function catchUpPastScores(env, games, existingScores) {
   const finishedScores = parseSerpGames(games);
   let updated = false;
   const merged = { ...existingScores };
-
   Object.entries(finishedScores).forEach(([key, val]) => {
     const prev = existingScores[key];
     if (!prev || !prev.done) {
@@ -301,26 +429,171 @@ async function catchUpPastScores(env, games, existingScores) {
       updated = true;
     }
   });
-
-  if (updated) {
-    await setFirebase(env, 'officialScores', merged);
-  }
+  if (updated) await setFirebase(env, 'officialScores', merged);
   return merged;
 }
+
+// ─── Init knockout officiel depuis les qualifiés des groupes ──────────────────
+
+/**
+ * Peuple officialKnockout/r16 avec les équipes qualifiées des groupes.
+ * Appelé depuis /init quand tous les groupes sont terminés.
+ * Ne nécessite pas de table de matchs prédéfinie :
+ * les équipes viennent des scores de groupes Firebase.
+ */
+function buildR16FromGroupScores(groupScores) {
+  // Reproduire la logique de classement des groupes (simplifiée)
+  const standings = {};
+
+  for (const grp of Object.keys(GROUPS)) {
+    const teams = {};
+    GROUPS[grp].forEach(m => {
+      if (!teams[m.t1]) teams[m.t1] = { code: m.t1, pts: 0, gf: 0, ga: 0, gd: 0, j: 0 };
+      if (!teams[m.t2]) teams[m.t2] = { code: m.t2, pts: 0, gf: 0, ga: 0, gd: 0, j: 0 };
+    });
+
+    GROUPS[grp].forEach((m, idx) => {
+      const sc = groupScores[`${grp}_${idx}`];
+      if (!sc || (!sc.done && !sc.official)) return;
+      const { s1, s2 } = sc;
+      teams[m.t1].j++; teams[m.t2].j++;
+      teams[m.t1].gf += s1; teams[m.t1].ga += s2;
+      teams[m.t2].gf += s2; teams[m.t2].ga += s1;
+      teams[m.t1].gd = teams[m.t1].gf - teams[m.t1].ga;
+      teams[m.t2].gd = teams[m.t2].gf - teams[m.t2].ga;
+      if (s1 > s2) { teams[m.t1].pts += 3; }
+      else if (s2 > s1) { teams[m.t2].pts += 3; }
+      else { teams[m.t1].pts++; teams[m.t2].pts++; }
+    });
+
+    standings[grp] = Object.values(teams).sort((a, b) =>
+      b.pts - a.pts || b.gd - a.gd || b.gf - a.gf
+    );
+  }
+
+  // Qualifiés 1ers et 2èmes
+  const q = {};
+  for (const grp of Object.keys(standings)) {
+    q[`1${grp}`] = standings[grp][0]?.code || null;
+    q[`2${grp}`] = standings[grp][1]?.code || null;
+    q[`3${grp}`] = standings[grp][2] ? { ...standings[grp][2], group: grp } : null;
+  }
+
+  // Meilleurs 3èmes (top 8)
+  const thirds = Object.keys(GROUPS)
+    .map(grp => q[`3${grp}`])
+    .filter(Boolean)
+    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf)
+    .slice(0, 8);
+
+  // GROUP_MAP (même ordre que data.js)
+  const GROUP_MAP = [
+    { t1: '1E', t2: null },
+    { t1: null, t2: '1I' },
+    { t1: '2A', t2: '2B' },
+    { t1: '1F', t2: '2C' },
+    { t1: '2K', t2: '2L' },
+    { t1: '1H', t2: '2J' },
+    { t1: null, t2: '1D' },
+    { t1: null, t2: '1G' },
+    { t1: '1C', t2: '2F' },
+    { t1: '2E', t2: '2I' },
+    { t1: '1A', t2: null },
+    { t1: null, t2: '1L' },
+    { t1: null, t2: '1B' },
+    { t1: null, t2: '1K' },
+    { t1: '1J', t2: '2H' },
+    { t1: '2D', t2: '2G' },
+  ];
+
+  // BEST_THIRD_SLOTS (même ordre que data.js)
+  const BEST_THIRD_SLOTS = [
+    { matchIdx: 0, position: 't2', allowedGroups: ['A', 'B', 'C', 'D', 'F'] },
+    { matchIdx: 1, position: 't1', allowedGroups: ['C', 'D', 'F', 'G', 'H'] },
+    { matchIdx: 6, position: 't2', allowedGroups: ['B', 'E', 'F', 'I', 'J'] },
+    { matchIdx: 7, position: 't1', allowedGroups: ['A', 'E', 'H', 'I', 'J'] },
+    { matchIdx: 10, position: 't2', allowedGroups: ['C', 'E', 'F', 'H', 'I'] },
+    { matchIdx: 11, position: 't1', allowedGroups: ['E', 'H', 'I', 'J', 'K'] },
+    { matchIdx: 12, position: 't1', allowedGroups: ['E', 'F', 'G', 'I', 'J'] },
+    { matchIdx: 13, position: 't1', allowedGroups: ['D', 'E', 'I', 'J', 'L'] },
+  ];
+
+  // Assigner les meilleurs 3èmes (backtrack trié par contrainte)
+  const sorted = [...thirds].sort((a, b) => {
+    const sA = BEST_THIRD_SLOTS.filter(s => s.allowedGroups.includes(a.group)).length;
+    const sB = BEST_THIRD_SLOTS.filter(s => s.allowedGroups.includes(b.group)).length;
+    return sA - sB;
+  });
+
+  const thirdAssignment = new Array(BEST_THIRD_SLOTS.length).fill(null);
+  const used = new Set();
+
+  function backtrack(slotIdx) {
+    if (slotIdx === BEST_THIRD_SLOTS.length) return true;
+    const slot = BEST_THIRD_SLOTS[slotIdx];
+    for (const team of sorted) {
+      if (used.has(team.group)) continue;
+      if (!slot.allowedGroups.includes(team.group)) continue;
+      thirdAssignment[slotIdx] = team;
+      used.add(team.group);
+      if (backtrack(slotIdx + 1)) return true;
+      used.delete(team.group);
+      thirdAssignment[slotIdx] = null;
+    }
+    return false;
+  }
+  backtrack(0);
+
+  // Construire r16
+  const r16 = {};
+  GROUP_MAP.forEach((pair, idx) => {
+    r16[idx] = {
+      t1: pair.t1 ? (q[pair.t1] || null) : null,
+      t2: pair.t2 ? (q[pair.t2] || null) : null,
+      s1: null, s2: null, pen1: null, pen2: null,
+      done: false, official: true, winner: null
+    };
+  });
+
+  // Appliquer les meilleurs 3èmes
+  thirdAssignment.forEach((team, slotIdx) => {
+    if (!team) return;
+    const slot = BEST_THIRD_SLOTS[slotIdx];
+    if (r16[slot.matchIdx]) r16[slot.matchIdx][slot.position] = team.code;
+  });
+
+  return r16;
+}
+
+// ─── Initialize ───────────────────────────────────────────────────────────────
 
 async function initialize(env) {
   const now = new Date();
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
-  const existingSchedule = await getFirebase(env, 'syncSchedule') || [];
-  const existingScores = await getFirebase(env, 'officialScores') || {};
+  await setFirebase(env, 'syncSchedule', []);
 
-  const games = await fetchFromSerpApi(env);
+  const existingScores = await getFirebase(env, 'officialScores') || {};
+  const existingKnockout = await getFirebase(env, 'officialKnockout') || {};
+
+  const games = await fetchFromSerpApi(env, 'results');
 
   const mergedScores = await catchUpPastScores(env, games, existingScores);
 
-  await updateScheduleForDays(env, today, tomorrow, existingSchedule, games);
+  // Vérifier si tous les groupes sont terminés pour peupler r16
+  const allGroupsFinished = Object.keys(GROUPS).every(grp =>
+    GROUPS[grp].every((_, idx) => mergedScores[`${grp}_${idx}`]?.done)
+  );
+
+  let mergedKnockout = { ...existingKnockout };
+  if (allGroupsFinished && !existingKnockout.r16) {
+    const r16 = buildR16FromGroupScores(mergedScores);
+    mergedKnockout.r16 = r16;
+    await setFirebase(env, 'officialKnockout', mergedKnockout);
+  }
+
+  await updateScheduleForDays(env, today, tomorrow, [], games);
 
   const updatedSchedule = await getFirebase(env, 'syncSchedule') || [];
   const finalSchedule = updatedSchedule.map(item => {
@@ -334,21 +607,25 @@ async function initialize(env) {
   return {
     scoresFound: Object.keys(mergedScores).length,
     matchesScheduled: finalSchedule.length,
+    allGroupsFinished,
+    r16Initialized: !!mergedKnockout.r16,
     todayDate: formatDate(today),
     tomorrowDate: formatDate(tomorrow)
   };
 }
 
+// ─── Cron midnight ────────────────────────────────────────────────────────────
+
 async function scheduleCronMidnight(env) {
   const now = new Date();
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-
   const existingSchedule = await getFirebase(env, 'syncSchedule') || [];
-  const games = await fetchFromSerpApi(env);
-
+  const games = await fetchFromSerpApi(env, 'results');
   await updateScheduleForDays(env, today, tomorrow, existingSchedule, games);
 }
+
+// ─── Sync cycle ───────────────────────────────────────────────────────────────
 
 async function runSyncCycle(env) {
   const now = Date.now();
@@ -368,13 +645,11 @@ async function runSyncCycle(env) {
       !(item.syncsExecuted || []).includes(t)
     );
     if (due.length > 0) return true;
-
     if (item.matchStart && (now - item.matchStart) > 2 * 60 * 60 * 1000) {
       return (now - (item.lastCheckedTime || 0)) > 30 * 60 * 1000;
     }
     return false;
   });
-
 
   const matchToConfirm = schedule.find(item => {
     if (item.finished) return false;
@@ -389,6 +664,8 @@ async function runSyncCycle(env) {
   if (matchToConfirm) matchesDue.push(matchToConfirm);
 
   const existing = await getFirebase(env, 'officialScores') || {};
+  const existingKnockout = await getFirebase(env, 'officialKnockout') || {};
+
   const existingSchedKeys = new Set(schedule.map(s => s.key));
   const missingFromSchedule = Object.entries(MATCH_DATES).filter(([key, dateStr]) => {
     if (existingSchedKeys.has(key)) return false;
@@ -398,7 +675,6 @@ async function runSyncCycle(env) {
   });
 
   const hasMissing = missingFromSchedule.length > 0;
-
   if (matchesDue.length === 0 && !hasMissing) return;
 
   const isOnlyLiveSync = !hasMissing && matchesDue.every(item => {
@@ -408,39 +684,81 @@ async function runSyncCycle(env) {
     );
     return due.length > 0 && due.every(t => item.matchStart && (t - item.matchStart) <= 65 * 60 * 1000);
   });
+
   const games = await fetchFromSerpApi(env, isOnlyLiveSync ? 'live' : 'results');
+
+  // ── Merge scores groupes ──
   const finishedScores = parseSerpGames(games);
   const liveScores = parseLiveGames(games);
-
-  let updated = false;
-  const merged = { ...existing };
+  let groupUpdated = false;
+  const mergedScores = { ...existing };
 
   Object.entries(finishedScores).forEach(([key, val]) => {
     const prev = existing[key];
     if (!prev || prev.s1 !== val.s1 || prev.s2 !== val.s2 || !prev.done) {
-      merged[key] = val;
-      updated = true;
+      mergedScores[key] = val;
+      groupUpdated = true;
     }
   });
-
   Object.entries(liveScores).forEach(([key, val]) => {
     const prev = existing[key];
     if (prev && prev.done) return;
     if (!prev || prev.s1 !== val.s1 || prev.s2 !== val.s2) {
-      merged[key] = val;
-      updated = true;
+      mergedScores[key] = val;
+      groupUpdated = true;
     }
   });
-
   missingFromSchedule.forEach(([key]) => {
     if (finishedScores[key] && !existing[key]) {
-      merged[key] = finishedScores[key];
-      updated = true;
+      mergedScores[key] = finishedScores[key];
+      groupUpdated = true;
     }
   });
 
-  if (updated) await setFirebase(env, 'officialScores', merged);
+  if (groupUpdated) await setFirebase(env, 'officialScores', mergedScores);
 
+  // ── Initialiser r16 si tous les groupes viennent de se terminer ──
+  let mergedKnockout = JSON.parse(JSON.stringify(existingKnockout));
+  const allGroupsFinished = Object.keys(GROUPS).every(grp =>
+    GROUPS[grp].every((_, idx) => mergedScores[`${grp}_${idx}`]?.done)
+  );
+  if (allGroupsFinished && !mergedKnockout.r16) {
+    mergedKnockout.r16 = buildR16FromGroupScores(mergedScores);
+  }
+
+  // ── Merge scores knockout ──
+  const knockoutFinished = parseKnockoutFinished(games, mergedKnockout);
+  const knockoutLive = parseKnockoutLive(games, mergedKnockout);
+  let knockoutUpdated = allGroupsFinished && !existingKnockout.r16; // r16 vient d'être initialisé
+
+  Object.entries(knockoutFinished).forEach(([round, matches]) => {
+    if (!mergedKnockout[round]) mergedKnockout[round] = {};
+    Object.entries(matches).forEach(([idx, val]) => {
+      const prev = existingKnockout[round]?.[idx];
+      if (!prev || !prev.done) {
+        mergedKnockout[round][idx] = val;
+        knockoutUpdated = true;
+      }
+    });
+  });
+
+  Object.entries(knockoutLive).forEach(([round, matches]) => {
+    if (!mergedKnockout[round]) mergedKnockout[round] = {};
+    Object.entries(matches).forEach(([idx, val]) => {
+      const prev = existingKnockout[round]?.[idx];
+      if (prev?.done) return;
+      mergedKnockout[round][idx] = val;
+      knockoutUpdated = true;
+    });
+  });
+
+  // ── Propager les vainqueurs vers le tour suivant ──
+  if (knockoutUpdated) {
+    mergedKnockout = propagateOfficialKnockout(mergedKnockout);
+    await setFirebase(env, 'officialKnockout', mergedKnockout);
+  }
+
+  // ── Mettre à jour le schedule ──
   const updatedSchedule = schedule.map(item => {
     const wasChecked = matchesDue.some(m => m.key === item.key);
     const newItem = {
@@ -448,22 +766,21 @@ async function runSyncCycle(env) {
       syncsExecuted: [...(item.syncsExecuted || [])],
       lastCheckedTime: wasChecked ? now : (item.lastCheckedTime || 0)
     };
-
     (item.syncTimes || []).forEach(t => {
       if (t <= now + WINDOW && t >= now - WINDOW && !newItem.syncsExecuted.includes(t)) {
         newItem.syncsExecuted.push(t);
       }
     });
-
-    if (merged[item.key]?.done && !item.finished) {
+    if (mergedScores[item.key]?.done && !item.finished) {
       newItem.finished = true;
     }
-
     return newItem;
   });
 
   await setFirebase(env, 'syncSchedule', updatedSchedule);
 }
+
+// ─── Export ───────────────────────────────────────────────────────────────────
 
 export default {
   async fetch(request, env) {
@@ -484,10 +801,13 @@ export default {
     if (url.pathname === '/status') {
       const scores = await getFirebase(env, 'officialScores') || {};
       const schedule = await getFirebase(env, 'syncSchedule') || [];
+      const knockout = await getFirebase(env, 'officialKnockout') || {};
       return new Response(JSON.stringify({
         scoresStored: Object.keys(scores).length,
         matchesScheduled: Array.isArray(schedule) ? schedule.length : 0,
-        matchesFinished: Array.isArray(schedule) ? schedule.filter(s => s.finished).length : 0
+        matchesFinished: Array.isArray(schedule) ? schedule.filter(s => s.finished).length : 0,
+        r16Initialized: !!knockout.r16,
+        knockoutRounds: Object.keys(knockout),
       }, null, 2), { headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -515,12 +835,18 @@ export default {
       });
     }
 
+    if (url.pathname === '/debug-knockout') {
+      const knockout = await getFirebase(env, 'officialKnockout') || {};
+      return new Response(JSON.stringify(knockout, null, 2), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     return new Response('Worker Coupe du Monde 2026');
   },
 
   async scheduled(event, env) {
     const now = new Date();
-
     if (now.getUTCHours() === 0 && now.getUTCMinutes() < 2) {
       await scheduleCronMidnight(env);
     }

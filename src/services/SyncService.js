@@ -13,5 +13,16 @@ const SyncService = {
 
   isKnockoutOfficial(officialKnockout, round, idx) {
     return officialKnockout?.[round]?.[idx]?.official === true;
+  },
+
+  mergeKnockoutIntoState(officialKnockout, localKnockout) {
+    const merged = JSON.parse(JSON.stringify(localKnockout));
+    Object.entries(officialKnockout).forEach(([round, matches]) => {
+      if (!merged[round]) merged[round] = {};
+      Object.entries(matches).forEach(([idx, val]) => {
+        merged[round][idx] = { ...val, official: true };
+      });
+    });
+    return merged;
   }
 };

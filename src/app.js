@@ -7,8 +7,10 @@ const App = {
     if (saved) this.state = { ...this.state, ...saved };
 
     const official = await FirebaseService.getOfficialScores();
+    const officialKnockout = await FirebaseService.getOfficialKnockout();
     this.state.officialScores = official;
-    this.state.groupScores    = SyncService.mergeIntoState(official, StorageService.load()?.groupScores || {});
+    this.state.officialKnockout = officialKnockout;
+    this.state.groupScores = SyncService.mergeIntoState(official, StorageService.load()?.groupScores || {});
 
     this.syncKnockout();
     GroupView.render(this.state.groupScores, this.state.officialScores);
@@ -18,26 +20,37 @@ const App = {
 
     FirebaseService.listenOfficialScores(scores => {
       this.state.officialScores = scores;
-      const local  = StorageService.load()?.groupScores || {};
+      const local = StorageService.load()?.groupScores || {};
       this.state.groupScores = SyncService.mergeIntoState(scores, local);
       this.syncKnockout();
       GroupView.render(this.state.groupScores, this.state.officialScores);
       KnockoutView.render(this.state.knockout, this.state.officialScores);
       ChampionView.render(this.state.knockout);
     });
+
+    FirebaseService.listenOfficialKnockout(knockout => {
+      this.state.officialKnockout = knockout;
+      this.syncKnockout();
+      KnockoutView.render(this.state.knockout, this.state.officialKnockout);
+      ChampionView.render(this.state.knockout);
+    });
   },
 
   syncKnockout() {
     Knockout.updateFromGroups(this.state.knockout, this.state.groupScores);
+    this.state.knockout = SyncService.mergeKnockoutIntoState(
+      this.state.officialKnockout || {},
+      this.state.knockout
+    );
     Knockout.propagate(this.state.knockout);
     StorageService.save(this.state);
   },
 
   showToast(msg, type = 'success') {
     const t = document.getElementById('toast');
-    t.textContent    = msg;
+    t.textContent = msg;
     t.style.borderColor = type === 'error' ? 'var(--accent)' : 'var(--green)';
-    t.style.color       = type === 'error' ? 'var(--accent)' : 'var(--green)';
+    t.style.color = type === 'error' ? 'var(--accent)' : 'var(--green)';
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
   },
@@ -47,7 +60,7 @@ const App = {
       if (e.key === 'Escape') closeModal();
       if (e.key === 'Enter' && this.currentModal) confirmModalScore();
     });
-    document.getElementById('scoreModal').addEventListener('click', function(e) {
+    document.getElementById('scoreModal').addEventListener('click', function (e) {
       if (e.target === this) closeModal();
     });
   }
@@ -90,7 +103,7 @@ function confirmModalScore() {
   } else if (App.currentModal.type === 'knockout') {
     const pen1 = parseInt(document.getElementById('modalPen1').value) || 0;
     const pen2 = parseInt(document.getElementById('modalPen2').value) || 0;
-    const ok   = KnockoutController.confirmScore(App.currentModal.round, App.currentModal.idx, s1, s2, pen1, pen2);
+    const ok = KnockoutController.confirmScore(App.currentModal.round, App.currentModal.idx, s1, s2, pen1, pen2);
     if (ok) closeModal();
   }
 }
@@ -121,8 +134,8 @@ function resetAll() {
   if (!confirm('Réinitialiser votre simulation personnelle ?')) return;
   const official = App.state.officialScores;
   App.state = {
-    groupScores:   SyncService.mergeIntoState(official, {}),
-    knockout:      {},
+    groupScores: SyncService.mergeIntoState(official, {}),
+    knockout: {},
     officialScores: official
   };
   StorageService.clear();
