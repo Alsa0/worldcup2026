@@ -12,7 +12,7 @@ const SyncService = {
   },
 
   isKnockoutOfficial(officialKnockout, round, idx) {
-    return officialKnockout?.[round]?.[idx]?.official === true;
+    return officialKnockout?.[round]?.[idx]?.official === true && officialKnockout?.[round]?.[idx]?.done === true;
   },
 
   mergeKnockoutIntoState(officialKnockout, localKnockout) {
