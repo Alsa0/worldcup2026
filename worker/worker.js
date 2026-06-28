@@ -75,6 +75,30 @@ const MATCH_DATES = {
   'L_0': 'Jun 17', 'L_1': 'Jun 17', 'L_2': 'Jun 22', 'L_3': 'Jun 23', 'L_4': 'Jun 26', 'L_5': 'Jun 26',
 };
 
+const KNOCKOUT_DATES = {
+  'r16_2': 'Jun 28', 'r16_0': 'Jun 29', 'r16_8': 'Jun 29', 'r16_3': 'Jun 30',
+  'r16_9': 'Jun 30', 'r16_1': 'Jun 30', 'r16_10': 'Jul 01', 'r16_11': 'Jul 01',
+  'r16_7': 'Jul 01', 'r16_6': 'Jul 02', 'r16_5': 'Jul 02', 'r16_13': 'Jul 03',
+  'r16_12': 'Jul 03', 'r16_15': 'Jul 03', 'r16_14': 'Jul 04', 'r16_4': 'Jul 04',
+  'r8_0': 'Jul 04', 'r8_1': 'Jul 04', 'r8_2': 'Jul 05', 'r8_3': 'Jul 06',
+  'r8_4': 'Jul 06', 'r8_5': 'Jul 07', 'r8_6': 'Jul 07', 'r8_7': 'Jul 07',
+  'qf_0': 'Jul 09', 'qf_1': 'Jul 10', 'qf_2': 'Jul 11', 'qf_3': 'Jul 12',
+  'sf_0': 'Jul 14', 'sf_1': 'Jul 15',
+  'f_0': 'Jul 19',
+};
+
+const KNOCKOUT_DEFAULT_TIMES = {
+  'r16_2': '21:00', 'r16_0': '22:30', 'r16_8': '19:00', 'r16_3': '03:00',
+  'r16_9': '19:00', 'r16_1': '23:00', 'r16_10': '03:00', 'r16_11': '18:00',
+  'r16_7': '22:00', 'r16_6': '02:00', 'r16_5': '21:00', 'r16_13': '01:00', 'r16_12': '05:00',
+  'r16_15': '20:00', 'r16_14': '00:00', 'r16_4': '03:30',
+  'r8_0': '19:00', 'r8_1': '23:00', 'r8_2': '22:00', 'r8_3': '02:00',
+  'r8_4': '21:00', 'r8_5': '02:00', 'r8_6': '18:00', 'r8_7': '22:00',
+  'qf_0': '22:00', 'qf_1': '21:00', 'qf_2': '23:00', 'qf_3': '03:00',
+  'sf_0': '21:00', 'sf_1': '21:00',
+  'f_0': '21:00',
+};
+
 function findMatchKey(t1, t2) {
   for (const grp of Object.keys(GROUPS)) {
     const matches = GROUPS[grp];
@@ -113,9 +137,15 @@ function parseMatchTime(dateStr, timeStr) {
 }
 
 function getMatchKeysForDate(dateStr) {
-  return Object.entries(MATCH_DATES)
+  const groupKeys = Object.entries(MATCH_DATES)
     .filter(([, d]) => d === dateStr)
     .map(([key]) => key);
+
+  const knockoutKeys = Object.entries(KNOCKOUT_DATES)
+    .filter(([, d]) => d === dateStr)
+    .map(([key]) => key);
+
+  return [...groupKeys, ...knockoutKeys];
 }
 
 function formatDate(date) {
@@ -322,19 +352,26 @@ function buildScheduleEntries(matchKeys, serpTimes, existingKeys) {
   const entries = [];
   matchKeys.forEach(key => {
     if (existingKeys.has(key)) return;
-    const dateStr = MATCH_DATES[key];
+
+    const isKO = KNOCKOUT_ROUNDS.some(r => key.startsWith(r));
+    const dateStr = isKO ? KNOCKOUT_DATES[key] : MATCH_DATES[key];
     if (!dateStr) return;
-    const timeStr = serpTimes[key] || DEFAULT_TIMES[key] || '00:00';
+
+    const timeStr = isKO
+      ? (KNOCKOUT_DEFAULT_TIMES[key] || '23:00')
+      : (serpTimes[key] || DEFAULT_TIMES[key] || '00:00');
+
     const matchStart = parseMatchTime(dateStr, timeStr);
     if (!matchStart) return;
-    const knockout = isKnockoutKey(key);
-    const offsets = knockout ? [60, 120, 130, 160, 175] : [60, 120, 130];
+
+    const offsets = isKO ? [60, 120, 130, 160, 175] : [60, 120, 130];
     const syncTimes = offsets.map(m => matchStart + m * 60 * 1000);
+
     entries.push({
       key, matchStart, syncTimes,
-      finished: false, knockout,
+      finished: false, knockout: isKO,
       syncsExecuted: [],
-      timeSource: serpTimes[key] ? 'serp' : 'default'
+      timeSource: isKO ? 'default' : (serpTimes[key] ? 'serp' : 'default')
     });
   });
   return entries;
