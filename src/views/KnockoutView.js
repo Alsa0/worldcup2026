@@ -54,8 +54,8 @@ const KnockoutView = {
     const label = round === 'r16' && R16_PAIRS[i] ? R16_PAIRS[i].label : '';
     const lock = '';
 
-    const score1 = m.done && m.s1 !== null ? (m.pen1 !== null ? `${m.s1} <small>(${m.pen1})</small>` : m.s1) : '';
-    const score2 = m.done && m.s2 !== null ? (m.pen2 !== null ? `${m.s2} <small>(${m.pen2})</small>` : m.s2) : '';
+    const score1 = m.done && m.s1 !== null ? (m.pen1 !== null && m.pen1 !== undefined ? `${m.s1} <small>(${m.pen1})</small>` : m.s1) : '';
+    const score2 = m.done && m.s2 !== null ? (m.pen2 !== null && m.pen2 !== undefined ? `${m.s2} <small>(${m.pen2})</small>` : m.s2) : '';
     const w1 = m.done && m.winner === m.t1 ? 'winner' : '';
     const w2 = m.done && m.winner === m.t2 ? 'winner' : '';
     const cursor = isOfficial ? 'default' : 'pointer';

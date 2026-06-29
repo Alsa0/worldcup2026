@@ -20,6 +20,7 @@ const SyncService = {
     Object.entries(officialKnockout).forEach(([round, matches]) => {
       if (!merged[round]) merged[round] = {};
       Object.entries(matches).forEach(([idx, val]) => {
+        if (!val) return;
         if (val.done) {
           merged[round][idx] = { ...val, official: true };
         } else {
