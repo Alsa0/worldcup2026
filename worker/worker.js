@@ -618,13 +618,13 @@ async function initialize(env) {
 
   const mergedScores = await catchUpPastScores(env, games, existingScores);
 
-  // Vérifier si tous les groupes sont terminés pour peupler r16
+
   const allGroupsFinished = Object.keys(GROUPS).every(grp =>
     GROUPS[grp].every((_, idx) => mergedScores[`${grp}_${idx}`]?.done)
   );
 
   let mergedKnockout = { ...existingKnockout };
-  if (allGroupsFinished && !existingKnockout.r16) {
+  if (allGroupsFinished) {
     const r16 = buildR16FromGroupScores(mergedScores);
     mergedKnockout.r16 = r16;
     await setFirebase(env, 'officialKnockout', mergedKnockout);
@@ -868,6 +868,47 @@ export default {
       );
       const data = await res.json();
       return new Response(JSON.stringify(data.sports_results || {}, null, 2), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (url.pathname === '/init-knockout') {
+      const existingScores = await getFirebase(env, 'officialScores') || {};
+      const allGroupsFinished = Object.keys(GROUPS).every(grp =>
+        GROUPS[grp].every((_, idx) => existingScores[`${grp}_${idx}`]?.done)
+      );
+      if (!allGroupsFinished) {
+        return new Response(JSON.stringify({ error: 'Groupes pas encore terminés' }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Construire r16
+      const r16 = buildR16FromGroupScores(existingScores);
+      let officialKnockout = { r16 };
+
+      // Fetch SerpApi et attraper les scores knockout déjà terminés
+      const games = await fetchFromSerpApi(env, 'results');
+      const knockoutFinished = parseKnockoutFinished(games, officialKnockout);
+
+      // Merger les scores trouvés
+      Object.entries(knockoutFinished).forEach(([round, matches]) => {
+        if (!officialKnockout[round]) officialKnockout[round] = {};
+        Object.entries(matches).forEach(([idx, val]) => {
+          officialKnockout[round][idx] = val;
+        });
+      });
+
+      // Propager les vainqueurs vers le tour suivant
+      officialKnockout = propagateOfficialKnockout(officialKnockout);
+
+      await setFirebase(env, 'officialKnockout', officialKnockout);
+
+      return new Response(JSON.stringify({
+        ok: true,
+        scoresFound: Object.values(knockoutFinished).reduce((acc, r) => acc + Object.keys(r).length, 0),
+        officialKnockout
+      }, null, 2), {
         headers: { 'Content-Type': 'application/json' }
       });
     }
