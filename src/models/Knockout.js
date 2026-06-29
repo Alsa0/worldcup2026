@@ -4,7 +4,6 @@ const Knockout = {
   },
 
   assignBestThirds(bestThirds) {
-    // Trier par nombre de slots disponibles (le moins de slots = priorité haute)
     const sorted = [...bestThirds].sort((a, b) => {
       const slotsA = BEST_THIRD_SLOTS.filter(s => s.allowedGroups.includes(a.group)).length;
       const slotsB = BEST_THIRD_SLOTS.filter(s => s.allowedGroups.includes(b.group)).length;
