@@ -207,10 +207,7 @@ function findKnockoutMatchKey(t1, t2, officialKnockout) {
   return null;
 }
 
-/**
- * Parse les tirs au but depuis SerpApi.
- * SerpApi peut retourner un champ "penalty" ou encoder "3 (5)" dans le score.
- */
+
 function extractPenalties(team) {
   if (team.penalty !== undefined && team.penalty !== null) {
     const p = parseInt(team.penalty);
@@ -422,17 +419,89 @@ async function fetchFromSerpApi(env, mode = 'results') {
 }
 
 // ─── Firebase ─────────────────────────────────────────────────────────────────
+// ─── Firebase Admin Auth (JWT signé) ───────────────────────────────────────────
+
+let cachedToken = null;
+let cachedTokenExpiry = 0;
+
+function base64UrlEncode(bytes) {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function pemToArrayBuffer(pem) {
+  const b64 = pem
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s/g, '');
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function getFirebaseAccessToken(env) {
+  const now = Math.floor(Date.now() / 1000);
+  if (cachedToken && cachedTokenExpiry > now + 60) return cachedToken;
+
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const claimSet = {
+    iss: env.FIREBASE_CLIENT_EMAIL,
+    scope: 'https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600
+  };
+
+  const encoder = new TextEncoder();
+  const headerB64 = base64UrlEncode(encoder.encode(JSON.stringify(header)));
+  const claimB64 = base64UrlEncode(encoder.encode(JSON.stringify(claimSet)));
+  const unsigned = `${headerB64}.${claimB64}`;
+
+  const keyData = pemToArrayBuffer(env.FIREBASE_PRIVATE_KEY);
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    keyData,
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    encoder.encode(unsigned)
+  );
+
+  const jwt = `${unsigned}.${base64UrlEncode(new Uint8Array(signature))}`;
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+  });
+
+  const data = await res.json();
+  if (!data.access_token) throw new Error('Échec auth Firebase: ' + JSON.stringify(data));
+
+  cachedToken = data.access_token;
+  cachedTokenExpiry = now + (data.expires_in || 3600);
+  return cachedToken;
+}
 
 async function getFirebase(env, path) {
   try {
-    const res = await fetch(`${env.FIREBASE_URL}/${path}.json`);
+    const token = await getFirebaseAccessToken(env);
+    const res = await fetch(`${env.FIREBASE_URL}/${path}.json?access_token=${token}`);
     const data = await res.json();
     return data || null;
   } catch (e) { return null; }
 }
 
 async function setFirebase(env, path, data) {
-  await fetch(`${env.FIREBASE_URL}/${path}.json`, {
+  const token = await getFirebaseAccessToken(env);
+  await fetch(`${env.FIREBASE_URL}/${path}.json?access_token=${token}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
