@@ -431,7 +431,8 @@ function base64UrlEncode(bytes) {
 }
 
 function pemToArrayBuffer(pem) {
-  const b64 = pem
+  const cleanPem = pem.replace(/\\n/g, '\n');
+  const b64 = cleanPem
     .replace('-----BEGIN PRIVATE KEY-----', '')
     .replace('-----END PRIVATE KEY-----', '')
     .replace(/\s/g, '');
