@@ -114,7 +114,8 @@ function toCode(name) { return TEAM_MAP[name] || null; }
 
 function isFinished(status) {
   if (!status) return false;
-  return ['FT', 'Terminé', 'Final', 'Full-time', 'Finished'].includes(status);
+  if (['FT', 'Terminé', 'Final', 'Full-time', 'Finished'].includes(status)) return true;
+  return status.startsWith('FT');
 }
 
 function isLive(status) {
@@ -211,12 +212,10 @@ function findKnockoutMatchKey(t1, t2, officialKnockout) {
  * SerpApi peut retourner un champ "penalty" ou encoder "3 (5)" dans le score.
  */
 function extractPenalties(team) {
-  // Cas 1 : champ penalty explicite
   if (team.penalty !== undefined && team.penalty !== null) {
     const p = parseInt(team.penalty);
     return isNaN(p) ? null : p;
   }
-  // Cas 2 : score encodé "3 (5)"
   if (typeof team.score === 'string') {
     const match = team.score.match(/\((\d+)\)/);
     if (match) return parseInt(match[1]);
@@ -618,16 +617,30 @@ async function initialize(env) {
 
   const mergedScores = await catchUpPastScores(env, games, existingScores);
 
-
   const allGroupsFinished = Object.keys(GROUPS).every(grp =>
     GROUPS[grp].every((_, idx) => mergedScores[`${grp}_${idx}`]?.done)
   );
 
   let mergedKnockout = { ...existingKnockout };
   if (allGroupsFinished) {
-    const r16 = buildR16FromGroupScores(mergedScores);
-    mergedKnockout.r16 = r16;
-    await setFirebase(env, 'officialKnockout', mergedKnockout);
+    if (!mergedKnockout.r16 || Object.keys(mergedKnockout.r16).length === 0) {
+      mergedKnockout.r16 = buildR16FromGroupScores(mergedScores);
+    }
+    const knockoutFinished = parseKnockoutFinished(games, mergedKnockout);
+    let knockoutUpdated = false;
+    Object.entries(knockoutFinished).forEach(([round, matches]) => {
+      if (!mergedKnockout[round]) mergedKnockout[round] = {};
+      Object.entries(matches).forEach(([idx, val]) => {
+        if (!mergedKnockout[round][idx]?.done) {
+          mergedKnockout[round][idx] = val;
+          knockoutUpdated = true;
+        }
+      });
+    });
+    if (knockoutUpdated || !existingKnockout.r16) {
+      mergedKnockout = propagateOfficialKnockout(mergedKnockout);
+      await setFirebase(env, 'officialKnockout', mergedKnockout);
+    }
   }
 
   await updateScheduleForDays(env, today, tomorrow, [], games);
@@ -759,7 +772,7 @@ async function runSyncCycle(env) {
   const allGroupsFinished = Object.keys(GROUPS).every(grp =>
     GROUPS[grp].every((_, idx) => mergedScores[`${grp}_${idx}`]?.done)
   );
-  if (allGroupsFinished && !mergedKnockout.r16) {
+  if (allGroupsFinished && (!mergedKnockout.r16 || Object.keys(mergedKnockout.r16).length === 0)) {
     mergedKnockout.r16 = buildR16FromGroupScores(mergedScores);
   }
 
@@ -808,8 +821,14 @@ async function runSyncCycle(env) {
         newItem.syncsExecuted.push(t);
       }
     });
-    if (mergedScores[item.key]?.done && !item.finished) {
-      newItem.finished = true;
+    if (!item.finished) {
+      if (item.knockout) {
+        const round = KNOCKOUT_ROUNDS.find(r => item.key.startsWith(r));
+        const idx = item.key.replace(`${round}_`, '');
+        if (mergedKnockout[round]?.[idx]?.done) newItem.finished = true;
+      } else {
+        if (mergedScores[item.key]?.done) newItem.finished = true;
+      }
     }
     return newItem;
   });
@@ -883,10 +902,22 @@ export default {
         });
       }
       const r16 = buildR16FromGroupScores(existingScores);
-      await setFirebase(env, 'officialKnockout', { r16 });
-      return new Response(JSON.stringify({ ok: true, r16 }, null, 2), {
-        headers: { 'Content-Type': 'application/json' }
+      let officialKnockout = { r16 };
+      const games = await fetchFromSerpApi(env, 'results');
+      const knockoutFinished = parseKnockoutFinished(games, officialKnockout);
+      Object.entries(knockoutFinished).forEach(([round, matches]) => {
+        if (!officialKnockout[round]) officialKnockout[round] = {};
+        Object.entries(matches).forEach(([idx, val]) => {
+          officialKnockout[round][idx] = val;
+        });
       });
+      officialKnockout = propagateOfficialKnockout(officialKnockout);
+      await setFirebase(env, 'officialKnockout', officialKnockout);
+      return new Response(JSON.stringify({
+        ok: true,
+        scoresFound: Object.values(knockoutFinished).reduce((acc, r) => acc + Object.keys(r).length, 0),
+        officialKnockout
+      }, null, 2), { headers: { 'Content-Type': 'application/json' } });
     }
 
     if (url.pathname === '/debug-knockout') {
@@ -894,6 +925,19 @@ export default {
       return new Response(JSON.stringify(knockout, null, 2), {
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    if (url.pathname === '/debug-date') {
+      const now = new Date();
+      const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+      const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+      const todayStr = formatDate(today);
+      const tomorrowStr = formatDate(tomorrow);
+      const keysToday = getMatchKeysForDate(todayStr);
+      const keysTomorrow = getMatchKeysForDate(tomorrowStr);
+      return new Response(JSON.stringify({
+        todayStr, tomorrowStr, keysToday, keysTomorrow
+      }, null, 2), { headers: { 'Content-Type': 'application/json' } });
     }
 
     return new Response('Worker Coupe du Monde 2026');
