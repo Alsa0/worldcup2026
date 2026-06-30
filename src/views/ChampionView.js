@@ -1,10 +1,10 @@
 const ChampionView = {
   render(knockout) {
     const section = document.getElementById('championSection');
-    const finale  = knockout['f']?.[0];
+    const finale = knockout['f']?.[0];
 
     if (finale && finale.done && finale.winner) {
-      const runner  = finale.winner === finale.t1 ? finale.t2 : finale.t1;
+      const runner = finale.winner === finale.t1 ? finale.t2 : finale.t1;
       const penNote = finale.pen1 !== null && finale.pen1 !== undefined
         ? ` (${finale.pen1} — ${finale.pen2} t.a.b.)` : '';
       section.innerHTML = `

@@ -153,8 +153,6 @@ function formatDate(date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
-// ─── Parse scores groupes ─────────────────────────────────────────────────────
-
 function parseSerpGames(games) {
   const scores = {};
   games.forEach(g => {
@@ -187,12 +185,6 @@ function parseLiveGames(games) {
   return scores;
 }
 
-// ─── Parse scores knockout ────────────────────────────────────────────────────
-
-/**
- * Cherche dans officialKnockout le match correspondant à t1/t2.
- * Retourne { round, idx } ou null.
- */
 function findKnockoutMatchKey(t1, t2, officialKnockout) {
   for (const round of KNOCKOUT_ROUNDS) {
     const roundData = officialKnockout?.[round];
@@ -229,29 +221,25 @@ function parseKnockoutFinished(games, officialKnockout) {
     const t2 = toCode(g.teams[1].name);
     if (!t1 || !t2) return;
 
-    // Score de base (temps réglementaire)
     const s1 = parseInt(g.teams[0].score);
     const s2 = parseInt(g.teams[1].score);
     if (isNaN(s1) || isNaN(s2)) return;
 
-    // Ce match est-il dans officialKnockout ?
     const found = findKnockoutMatchKey(t1, t2, officialKnockout);
     if (!found) return;
 
     const { round, idx } = found;
 
-    // Tirs au but
     const pen1 = extractPenalties(g.teams[0]);
     const pen2 = extractPenalties(g.teams[1]);
 
-    // Déterminer le vainqueur
     let winner;
     if (s1 !== s2) {
       winner = s1 > s2 ? t1 : t2;
     } else if (pen1 !== null && pen2 !== null && pen1 !== pen2) {
       winner = pen1 > pen2 ? t1 : t2;
     } else {
-      winner = null; // match pas encore tranché (ne devrait pas arriver sur FT)
+      winner = null;
     }
 
     if (!scores[round]) scores[round] = {};
@@ -292,10 +280,6 @@ function parseKnockoutLive(games, officialKnockout) {
   return scores;
 }
 
-/**
- * Propage les vainqueurs de chaque round vers le round suivant.
- * Peuple t1/t2 des matchs du tour suivant automatiquement.
- */
 function propagateOfficialKnockout(officialKnockout) {
   for (let ri = 0; ri < KNOCKOUT_ROUNDS.length - 1; ri++) {
     const cur = KNOCKOUT_ROUNDS[ri];
@@ -329,7 +313,6 @@ function propagateOfficialKnockout(officialKnockout) {
   return officialKnockout;
 }
 
-// ─── SerpApi ──────────────────────────────────────────────────────────────────
 
 function extractTimesFromSerp(games) {
   const times = {};
@@ -418,8 +401,6 @@ async function fetchFromSerpApi(env, mode = 'results') {
   return [];
 }
 
-// ─── Firebase ─────────────────────────────────────────────────────────────────
-// ─── Firebase Admin Auth (JWT signé) ───────────────────────────────────────────
 
 let cachedToken = null;
 let cachedTokenExpiry = 0;
@@ -509,8 +490,6 @@ async function setFirebase(env, path, data) {
   });
 }
 
-// ─── Schedule ─────────────────────────────────────────────────────────────────
-
 async function updateScheduleForDays(env, date1, date2, existingSchedule, serpGames) {
   const existingKeys = new Set(existingSchedule.map(s => s.key));
   const serpTimes = extractTimesFromSerp(serpGames);
@@ -539,16 +518,7 @@ async function catchUpPastScores(env, games, existingScores) {
   return merged;
 }
 
-// ─── Init knockout officiel depuis les qualifiés des groupes ──────────────────
-
-/**
- * Peuple officialKnockout/r16 avec les équipes qualifiées des groupes.
- * Appelé depuis /init quand tous les groupes sont terminés.
- * Ne nécessite pas de table de matchs prédéfinie :
- * les équipes viennent des scores de groupes Firebase.
- */
 function buildR16FromGroupScores(groupScores) {
-  // Reproduire la logique de classement des groupes (simplifiée)
   const standings = {};
 
   for (const grp of Object.keys(GROUPS)) {
@@ -577,7 +547,6 @@ function buildR16FromGroupScores(groupScores) {
     );
   }
 
-  // Qualifiés 1ers et 2èmes
   const q = {};
   for (const grp of Object.keys(standings)) {
     q[`1${grp}`] = standings[grp][0]?.code || null;
@@ -585,14 +554,12 @@ function buildR16FromGroupScores(groupScores) {
     q[`3${grp}`] = standings[grp][2] ? { ...standings[grp][2], group: grp } : null;
   }
 
-  // Meilleurs 3èmes (top 8)
   const thirds = Object.keys(GROUPS)
     .map(grp => q[`3${grp}`])
     .filter(Boolean)
     .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf)
     .slice(0, 8);
 
-  // GROUP_MAP (même ordre que data.js)
   const GROUP_MAP = [
     { t1: '1E', t2: null },
     { t1: null, t2: '1I' },
@@ -612,7 +579,6 @@ function buildR16FromGroupScores(groupScores) {
     { t1: '2D', t2: '2G' },
   ];
 
-  // BEST_THIRD_SLOTS (même ordre que data.js)
   const BEST_THIRD_SLOTS = [
     { matchIdx: 0, position: 't2', allowedGroups: ['A', 'C', 'D', 'F'] },
     { matchIdx: 1, position: 't1', allowedGroups: ['C', 'F', 'G', 'H'] },
@@ -624,7 +590,6 @@ function buildR16FromGroupScores(groupScores) {
     { matchIdx: 13, position: 't1', allowedGroups: ['D', 'E', 'I', 'L'] },
   ];
 
-  // Assigner les meilleurs 3èmes (backtrack trié par contrainte)
   const sorted = [...thirds].sort((a, b) => {
     const sA = BEST_THIRD_SLOTS.filter(s => s.allowedGroups.includes(a.group)).length;
     const sB = BEST_THIRD_SLOTS.filter(s => s.allowedGroups.includes(b.group)).length;
@@ -650,7 +615,6 @@ function buildR16FromGroupScores(groupScores) {
   }
   backtrack(0);
 
-  // Construire r16
   const r16 = {};
   GROUP_MAP.forEach((pair, idx) => {
     r16[idx] = {
@@ -661,7 +625,6 @@ function buildR16FromGroupScores(groupScores) {
     };
   });
 
-  // Appliquer les meilleurs 3èmes
   thirdAssignment.forEach((team, slotIdx) => {
     if (!team) return;
     const slot = BEST_THIRD_SLOTS[slotIdx];
@@ -670,8 +633,6 @@ function buildR16FromGroupScores(groupScores) {
 
   return r16;
 }
-
-// ─── Initialize ───────────────────────────────────────────────────────────────
 
 async function initialize(env) {
   const now = new Date();
@@ -734,8 +695,6 @@ async function initialize(env) {
   };
 }
 
-// ─── Cron midnight ────────────────────────────────────────────────────────────
-
 async function scheduleCronMidnight(env) {
   const now = new Date();
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -744,8 +703,6 @@ async function scheduleCronMidnight(env) {
   const games = await fetchFromSerpApi(env, 'results');
   await updateScheduleForDays(env, today, tomorrow, existingSchedule, games);
 }
-
-// ─── Sync cycle ───────────────────────────────────────────────────────────────
 
 async function runSyncCycle(env) {
   const now = Date.now();
@@ -807,7 +764,6 @@ async function runSyncCycle(env) {
 
   const games = await fetchFromSerpApi(env, isOnlyLiveSync ? 'live' : 'results');
 
-  // ── Merge scores groupes ──
   const finishedScores = parseSerpGames(games);
   const liveScores = parseLiveGames(games);
   let groupUpdated = false;
@@ -837,7 +793,6 @@ async function runSyncCycle(env) {
 
   if (groupUpdated) await setFirebase(env, 'officialScores', mergedScores);
 
-  // ── Initialiser r16 si tous les groupes viennent de se terminer ──
   let mergedKnockout = JSON.parse(JSON.stringify(existingKnockout));
   const allGroupsFinished = Object.keys(GROUPS).every(grp =>
     GROUPS[grp].every((_, idx) => mergedScores[`${grp}_${idx}`]?.done)
@@ -846,10 +801,9 @@ async function runSyncCycle(env) {
     mergedKnockout.r16 = buildR16FromGroupScores(mergedScores);
   }
 
-  // ── Merge scores knockout ──
   const knockoutFinished = parseKnockoutFinished(games, mergedKnockout);
   const knockoutLive = parseKnockoutLive(games, mergedKnockout);
-  let knockoutUpdated = allGroupsFinished && !existingKnockout.r16; // r16 vient d'être initialisé
+  let knockoutUpdated = allGroupsFinished && !existingKnockout.r16;
 
   Object.entries(knockoutFinished).forEach(([round, matches]) => {
     if (!mergedKnockout[round]) mergedKnockout[round] = {};
@@ -872,13 +826,11 @@ async function runSyncCycle(env) {
     });
   });
 
-  // ── Propager les vainqueurs vers le tour suivant ──
   if (knockoutUpdated) {
     mergedKnockout = propagateOfficialKnockout(mergedKnockout);
     await setFirebase(env, 'officialKnockout', mergedKnockout);
   }
 
-  // ── Mettre à jour le schedule ──
   const updatedSchedule = schedule.map(item => {
     const wasChecked = matchesDue.some(m => m.key === item.key);
     const newItem = {
@@ -905,8 +857,6 @@ async function runSyncCycle(env) {
 
   await setFirebase(env, 'syncSchedule', updatedSchedule);
 }
-
-// ─── Export ───────────────────────────────────────────────────────────────────
 
 export default {
   async fetch(request, env) {
