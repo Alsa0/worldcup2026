@@ -150,7 +150,9 @@ function getMatchKeysForDate(dateStr) {
 }
 
 function formatDate(date) {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const month = date.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+  const day = date.toLocaleDateString('en-US', { day: '2-digit', timeZone: 'UTC' });
+  return `${month} ${day}`;
 }
 
 function parseSerpGames(games) {
