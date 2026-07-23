@@ -90,7 +90,7 @@ const KNOCKOUT_DATES = {
 const KNOCKOUT_DEFAULT_TIMES = {
   'r16_2': '21:00', 'r16_0': '22:30', 'r16_8': '17:00', 'r16_3': '03:00',
   'r16_9': '19:00', 'r16_1': '23:00', 'r16_10': '03:00', 'r16_11': '18:00',
-  'r16_7': '22:00', 'r16_6': '02:00', 'r16_5': '21:00', 'r16_13': '01:00', 'r16_12': '05:00',
+  'r16_7': '20:00', 'r16_6': '02:00', 'r16_5': '21:00', 'r16_13': '01:00', 'r16_12': '05:00',
   'r16_15': '20:00', 'r16_14': '00:00', 'r16_4': '03:30',
   'r8_0': '19:00', 'r8_1': '23:00', 'r8_2': '22:00', 'r8_3': '02:00',
   'r8_4': '21:00', 'r8_5': '02:00', 'r8_6': '18:00', 'r8_7': '22:00',
@@ -114,7 +114,7 @@ function toCode(name) { return TEAM_MAP[name] || null; }
 
 function isFinished(status) {
   if (!status) return false;
-  if (['FT', 'Terminé', 'Final', 'Full-time', 'Finished'].includes(status)) return true;
+  if (['FT', 'AET', 'Terminé', 'Final', 'Full-time', 'Finished'].includes(status)) return true;
   return status.startsWith('FT');
 }
 
@@ -923,8 +923,18 @@ export default {
           headers: { 'Content-Type': 'application/json' }
         });
       }
+      const existingKnockout = await getFirebase(env, 'officialKnockout') || {};
       const r16 = buildR16FromGroupScores(existingScores);
-      let officialKnockout = { r16 };
+
+      // Fusionner r16 avec les scores existants sans les écraser
+      const mergedR16 = { ...r16 };
+      if (existingKnockout.r16) {
+        Object.entries(existingKnockout.r16).forEach(([idx, val]) => {
+          if (val && val.done) mergedR16[idx] = val; // garder les scores terminés
+        });
+      }
+
+      let officialKnockout = { ...existingKnockout, r16: mergedR16 };
       const games = await fetchFromSerpApi(env, 'results');
       const knockoutFinished = parseKnockoutFinished(games, officialKnockout);
       Object.entries(knockoutFinished).forEach(([round, matches]) => {
